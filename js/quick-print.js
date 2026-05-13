@@ -246,6 +246,74 @@
   // Run once on load
   updateService();
 
+  function serviceLabel(value) {
+    if (serviceKeyIsSelect) {
+      var opt = serviceType.querySelector('option[value="' + value + '"]');
+      if (opt) return opt.textContent;
+    }
+    var key = String(value || "");
+    return key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[-_]/g, " ") || "Print job";
+  }
+
+  function selectedText(select) {
+    if (!select || !select.options || select.selectedIndex < 0) return "";
+    return select.options[select.selectedIndex].textContent;
+  }
+
+  function validateCurrentPrintJob() {
+    var isBannerCustom = serviceType.value === "banner" && paperSize.value === "custom";
+
+    if (isBannerCustom) {
+      var w = parseFloat(customWidth.value);
+      var h = parseFloat(customHeight.value);
+      if (!w || !h || w <= 0 || h <= 0) {
+        notify("Please enter a valid custom width and height.", "error");
+        return false;
+      }
+    }
+
+    if (!files.length) {
+      notify("Please add at least one file to print.", "error");
+      return false;
+    }
+
+    return true;
+  }
+
+  function createPrintJobSnapshot() {
+    var cfg = SERVICE_CONFIG[serviceType.value] || SERVICE_CONFIG.document;
+    var isBannerCustom = serviceType.value === "banner" && paperSize.value === "custom";
+    var jobFiles = files.slice();
+    return {
+      service: serviceType.value,
+      serviceLabel: serviceLabel(serviceType.value),
+      colorMode: cfg.showColor !== false ? colorMode.value : "",
+      colorLabel: cfg.showColor !== false ? selectedText(colorMode) : "",
+      size: paperSize.value,
+      sizeLabel: selectedText(paperSize),
+      copies: cfg.showCopies !== false ? (copies.value || 1) : 1,
+      pages: cfg.showPages !== false ? (pages.value || 1) : 1,
+      customWidth: isBannerCustom ? customWidth.value : "",
+      customHeight: isBannerCustom ? customHeight.value : "",
+      files: jobFiles,
+    };
+  }
+
+  function formDataFromJob(job) {
+    var formData = new FormData();
+    job.files.forEach(function (f) { formData.append("files", f); });
+    formData.append("service", job.service);
+    formData.append("colorMode", job.colorMode || "");
+    formData.append("size", job.size || "");
+    formData.append("copies", job.copies || 1);
+    formData.append("pages", job.pages || 1);
+    if (job.customWidth && job.customHeight) {
+      formData.append("customWidth", job.customWidth);
+      formData.append("customHeight", job.customHeight);
+    }
+    return formData;
+  }
+
   /* ─────────────────────────────────────────────────────────────────
    * 6. FILE HANDLING  (drag-and-drop + file input)
    * ───────────────────────────────────────────────────────────────── */
@@ -266,6 +334,20 @@
   var objectUrls = [];
   var currentIdx = 0;
   var pendingSubmit = null;
+  var pendingCartItems = null;
+  var cartItems = [];
+  var cartActions = null;
+  var addToCartBtn = null;
+  var viewCartBtn = null;
+  var cartBadge = null;
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
 
   // ── Drag & drop ──────────────────────────────────────
   dropZone.addEventListener("dragover", function (e) {
@@ -323,7 +405,61 @@
     previewBtn.style.display = files.length ? "inline-flex" : "none";
   }
 
+  function setupCartControls() {
+    cartActions = document.createElement("div");
+    cartActions.className = "quick-cart-actions";
+    cartActions.innerHTML =
+      '<button type="button" class="btn btn-outline full-width quick-cart-add" id="add-to-cart-btn">Add to cart</button>' +
+      '<button type="button" class="btn btn-outline full-width quick-cart-view" id="view-cart-btn">Cart <span class="quick-cart-badge" id="quick-cart-badge">0</span></button>';
+    submitBtn.insertAdjacentElement("beforebegin", cartActions);
+
+    addToCartBtn = cartActions.querySelector("#add-to-cart-btn");
+    viewCartBtn = cartActions.querySelector("#view-cart-btn");
+    cartBadge = cartActions.querySelector("#quick-cart-badge");
+
+    addToCartBtn.addEventListener("click", addCurrentJobToCart);
+    viewCartBtn.addEventListener("click", openCartModal);
+    window.addEventListener("printurge-auth-change", updateCartVisibility);
+    updateCartVisibility();
+  }
+
+  function updateCartVisibility() {
+    var visible = isSignedIn();
+    if (cartActions) cartActions.hidden = !visible;
+    if (addToCartBtn) addToCartBtn.hidden = !visible;
+    if (viewCartBtn) viewCartBtn.hidden = !visible;
+    if (!visible && cartItems.length) {
+      cartItems = [];
+      renderCart();
+      closeCartModal();
+      notify("Print cart cleared after signing out.", "info");
+    }
+    updateCartBadge();
+  }
+
+  function updateCartBadge() {
+    if (cartBadge) cartBadge.textContent = String(cartItems.length);
+    if (viewCartBtn) viewCartBtn.disabled = !cartItems.length;
+  }
+
+  function addCurrentJobToCart() {
+    if (!isSignedIn()) {
+      notify("Print cart is available for signed-in accounts only.", "error");
+      return;
+    }
+    if (!validateCurrentPrintJob()) return;
+
+    cartItems.push(createPrintJobSnapshot());
+    closePreview(true);
+    updateCartBadge();
+    renderCart();
+    notify("Added to cart. You can add another print job now.", "success");
+  }
+
   // ── Render all slides ─────────────────────────────────
+  setupCartControls();
+  updateIndicator();
+
   function renderSlides() {
     previewSlider.innerHTML = "";
     objectUrls.forEach(function (u) { URL.revokeObjectURL(u); });
@@ -411,6 +547,101 @@
   }
 
   // ── Slider navigation ─────────────────────────────────
+  function ensureCartModal() {
+    var modal = document.getElementById("printurge-cart-modal");
+    if (modal) return modal;
+    modal = document.createElement("div");
+    modal.className = "modal print-cart-modal";
+    modal.id = "printurge-cart-modal";
+    modal.setAttribute("aria-hidden", "true");
+    modal.innerHTML =
+      '<div class="modal-overlay" data-cart-close></div>' +
+      '<div class="modal-content auth-modal" role="dialog" aria-modal="true" aria-labelledby="print-cart-title">' +
+      '<div class="modal-header auth-header"><div class="auth-heading">' +
+      '<h2 class="auth-title" id="print-cart-title">Print cart</h2>' +
+      '<p class="auth-subtitle" id="print-cart-subtitle">Review multiple print jobs before checkout.</p>' +
+      '</div><button type="button" class="modal-close" data-cart-close aria-label="Close">Close</button></div>' +
+      '<div class="print-cart-list" id="print-cart-list"></div>' +
+      '<p class="auth-hint print-cart-empty" id="print-cart-empty">Your cart is empty. Add a print job first.</p>' +
+      '<div class="payment-actions">' +
+      '<button type="button" class="btn btn-outline" data-cart-close>Keep adding</button>' +
+      '<button type="button" class="btn btn-primary" id="print-cart-checkout">Checkout cart</button>' +
+      '</div></div>';
+    document.body.appendChild(modal);
+    modal.querySelectorAll("[data-cart-close]").forEach(function (el) {
+      el.addEventListener("click", closeCartModal);
+    });
+    modal.querySelector("#print-cart-checkout").addEventListener("click", function () {
+      if (!isSignedIn()) {
+        notify("Print cart is available for signed-in accounts only.", "error");
+        return;
+      }
+      if (!cartItems.length) {
+        notify("Your print cart is empty.", "error");
+        return;
+      }
+      closeCartModal();
+      openCartPaymentModal(cartItems.slice());
+    });
+    return modal;
+  }
+
+  function renderCart() {
+    var modal = document.getElementById("printurge-cart-modal");
+    if (!modal) return;
+    var list = modal.querySelector("#print-cart-list");
+    var empty = modal.querySelector("#print-cart-empty");
+    var checkout = modal.querySelector("#print-cart-checkout");
+    if (!list || !empty || !checkout) return;
+
+    list.innerHTML = cartItems.map(function (item, idx) {
+      var details = [
+        item.sizeLabel,
+        item.colorLabel,
+        item.copies + " copy/copies",
+        item.pages + " page(s)",
+      ].filter(Boolean).join(" · ");
+      return (
+        '<article class="print-cart-item">' +
+        '<div><strong>' + escapeHtml(item.serviceLabel) + '</strong>' +
+        '<span>' + escapeHtml(details) + '</span>' +
+        '<small>' + item.files.length + ' file(s)</small></div>' +
+        '<button type="button" class="btn btn-outline print-cart-remove" data-cart-remove="' + idx + '">Remove</button>' +
+        '</article>'
+      );
+    }).join("");
+
+    list.querySelectorAll("[data-cart-remove]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        cartItems.splice(Number(btn.dataset.cartRemove), 1);
+        updateCartBadge();
+        renderCart();
+      });
+    });
+    empty.hidden = !!cartItems.length;
+    checkout.disabled = !cartItems.length;
+  }
+
+  function openCartModal() {
+    if (!isSignedIn()) {
+      notify("Print cart is available for signed-in accounts only.", "error");
+      return;
+    }
+    var modal = ensureCartModal();
+    renderCart();
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("is-modal-open");
+  }
+
+  function closeCartModal() {
+    var modal = document.getElementById("printurge-cart-modal");
+    if (!modal) return;
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("is-modal-open");
+  }
+
   prevBtn.addEventListener("click", function () { showSlide(currentIdx - 1); });
   nextBtn.addEventListener("click", function () { showSlide(currentIdx + 1); });
 
@@ -597,7 +828,7 @@
       }
       details.paymentStatus = "unpaid";
       details.paymentMethod = "cash";
-      if (pendingSubmit) sendPrintRequest(pendingSubmit, details, null);
+      submitPendingCheckout(details, null);
     });
     modal.querySelector("[data-receipt-back]").addEventListener("click", function () {
       openBankQrWindowModal();
@@ -616,7 +847,7 @@
         return;
       }
       details.paymentStatus = "pending_review";
-      if (pendingSubmit) sendPrintRequest(pendingSubmit, details, f);
+      submitPendingCheckout(details, f);
     });
     return modal;
   }
@@ -682,6 +913,22 @@
 
   function openPaymentModal(formData) {
     pendingSubmit = formData;
+    pendingCartItems = null;
+    var modal = ensurePaymentModal();
+    var paymentMethod = modal.querySelector('[name="paymentMethod"]');
+    if (paymentMethod) paymentMethod.value = "cash";
+    closeBankQrWindowModal();
+    syncPaymentMethodLock();
+    prefillCheckoutIdentity();
+    showPaymentStep("details");
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("is-modal-open");
+  }
+
+  function openCartPaymentModal(items) {
+    pendingSubmit = null;
+    pendingCartItems = items;
     var modal = ensurePaymentModal();
     var paymentMethod = modal.querySelector('[name="paymentMethod"]');
     if (paymentMethod) paymentMethod.value = "cash";
@@ -702,6 +949,7 @@
     modal.setAttribute("aria-hidden", "true");
     document.body.classList.remove("is-modal-open");
     pendingSubmit = null;
+    pendingCartItems = null;
   }
 
   function readPaymentDetails() {
@@ -715,7 +963,7 @@
     };
   }
 
-  async function sendPrintRequest(formData, paymentDetails, receiptFile) {
+  function applyPaymentDetails(formData, paymentDetails, receiptFile) {
     if (paymentDetails) {
       formData.set("customerName", paymentDetails.customerName || "");
       formData.set("customerEmail", paymentDetails.customerEmail || "");
@@ -726,17 +974,34 @@
     if (receiptFile) {
       formData.set("paymentReceipt", receiptFile);
     }
+  }
+
+  async function postPrintRequest(formData, paymentDetails, receiptFile) {
+    applyPaymentDetails(formData, paymentDetails, receiptFile);
+    var headers = {};
+    if (window.PrintUrgeSession && typeof window.PrintUrgeSession.getToken === "function") {
+      var tok = window.PrintUrgeSession.getToken();
+      if (tok) headers.Authorization = "Bearer " + tok;
+    }
+    var apiPath = window.PrintUrgeApiPath || function (path) { return path; };
+    var res = await fetch(apiPath("/api/print-requests"), { method: "POST", headers: headers, body: formData });
+    var data = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error(data.detail ? (data.error || "Upload failed") + ": " + data.detail : data.error || "Upload failed");
+    return data;
+  }
+
+  function submitPendingCheckout(paymentDetails, receiptFile) {
+    if (pendingCartItems && pendingCartItems.length) {
+      sendCartRequests(pendingCartItems, paymentDetails, receiptFile);
+      return;
+    }
+    if (pendingSubmit) sendPrintRequest(pendingSubmit, paymentDetails, receiptFile);
+  }
+
+  async function sendPrintRequest(formData, paymentDetails, receiptFile) {
     try {
       setButtonLoading(submitBtn, true, "Sending...");
-      var headers = {};
-      if (window.PrintUrgeSession && typeof window.PrintUrgeSession.getToken === "function") {
-        var tok = window.PrintUrgeSession.getToken();
-        if (tok) headers.Authorization = "Bearer " + tok;
-      }
-      var apiPath = window.PrintUrgeApiPath || function (path) { return path; };
-      var res = await fetch(apiPath("/api/print-requests"), { method: "POST", headers: headers, body: formData });
-      var data = await res.json().catch(function () { return {}; });
-      if (!res.ok) throw new Error(data.detail ? (data.error || "Upload failed") + ": " + data.detail : data.error || "Upload failed");
+      var data = await postPrintRequest(formData, paymentDetails, receiptFile);
       var ps = data.payment_status || "";
       var extra = ps === "pending_review" ? " Payment proof received; staff will confirm shortly." : "";
       notify("Print request submitted. Transaction " + (data.transaction_id || "created") + "." + extra, "success");
@@ -750,38 +1015,30 @@
     }
   }
 
-  submitBtn.addEventListener("click", async function () {
-    var cfg            = SERVICE_CONFIG[serviceType.value] || SERVICE_CONFIG.document;
-    var isBannerCustom = serviceType.value === "banner" && paperSize.value === "custom";
-
-    if (isBannerCustom) {
-      var w = parseFloat(customWidth.value);
-      var h = parseFloat(customHeight.value);
-      if (!w || !h || w <= 0 || h <= 0) {
-        notify("Please enter a valid custom width and height.", "error");
-        return;
+  async function sendCartRequests(items, paymentDetails, receiptFile) {
+    try {
+      setButtonLoading(submitBtn, true, "Submitting cart...");
+      var created = [];
+      for (var i = 0; i < items.length; i += 1) {
+        var data = await postPrintRequest(formDataFromJob(items[i]), paymentDetails, receiptFile);
+        created.push(data.transaction_id || ("item " + (i + 1)));
       }
+      cartItems = [];
+      updateCartBadge();
+      renderCart();
+      closePaymentModal();
+      notify("Cart submitted. Transactions: " + created.join(", ") + ".", "success");
+    } catch (err) {
+      console.error(err);
+      notify(err.message || "We could not submit your cart. Check your connection and try again.", "error");
+    } finally {
+      setButtonLoading(submitBtn, false);
     }
+  }
 
-    if (!files.length) {
-      notify("Please add at least one file to print.", "error");
-      return;
-    }
-
-    var formData = new FormData();
-    files.forEach(function (f) { formData.append("files", f); });
-    formData.append("service",   serviceType.value);
-    formData.append("colorMode", cfg.showColor  !== false ? colorMode.value : "");
-    formData.append("size",      paperSize.value);
-    formData.append("copies",    cfg.showCopies !== false ? (copies.value  || 1) : 1);
-    formData.append("pages",     cfg.showPages  !== false ? (pages.value   || 1) : 1);
-
-    if (isBannerCustom) {
-      formData.append("customWidth",  customWidth.value);
-      formData.append("customHeight", customHeight.value);
-    }
-
-    openPaymentModal(formData);
+  submitBtn.addEventListener("click", async function () {
+    if (!validateCurrentPrintJob()) return;
+    openPaymentModal(formDataFromJob(createPrintJobSnapshot()));
   });
 
 })();
