@@ -245,10 +245,18 @@
       '<p style="font-weight:700;margin:0 0 .35rem">Files</p>' +
       files
         .map(function (f) {
+          var isReceipt = f.kind === "payment_receipt";
           var tag =
-            f.kind === "payment_receipt"
+            isReceipt
               ? ' <span class="admin-badge is-pending" style="margin-left:.35rem">Receipt</span>'
               : "";
+          var primaryAction = isReceipt
+            ? '<button type="button" class="btn btn-primary" data-view-file="' +
+              escapeHtml(f.storedName) +
+              '">View</button>'
+            : '<button type="button" class="btn btn-primary" data-print-file="' +
+              escapeHtml(f.storedName) +
+              '">Print file</button>';
           return (
             '<div class="admin-file-row"><span>' +
             escapeHtml(f.originalName || f.storedName) +
@@ -257,9 +265,8 @@
             '<button type="button" class="btn btn-outline" data-dl="' +
             escapeHtml(f.storedName) +
             '">Download</button>' +
-            '<button type="button" class="btn btn-primary" data-print-file="' +
-            escapeHtml(f.storedName) +
-            '">Print file</button></div></div>'
+            primaryAction +
+            "</div></div>"
           );
         })
         .join("");
@@ -321,6 +328,25 @@
       }, 700);
     } catch (err) {
       notify(err.message || "Could not print file.", "error");
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
+
+  async function viewFile(storedName, btn) {
+    try {
+      setButtonLoading(btn, true, "Opening...");
+      var blob = await fetchFileBlob(storedName);
+      var url = URL.createObjectURL(blob);
+      var win = window.open(url, "_blank");
+      if (!win) {
+        notify("Allow popups to view this file.", "error");
+        URL.revokeObjectURL(url);
+        return;
+      }
+      setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+    } catch (err) {
+      notify(err.message || "Could not view file.", "error");
     } finally {
       setButtonLoading(btn, false);
     }
@@ -427,7 +453,12 @@
         return;
       }
       var pr = e.target.closest("[data-print-file]");
-      if (pr) printFile(pr.getAttribute("data-print-file"), pr);
+      if (pr) {
+        printFile(pr.getAttribute("data-print-file"), pr);
+        return;
+      }
+      var view = e.target.closest("[data-view-file]");
+      if (view) viewFile(view.getAttribute("data-view-file"), view);
     });
   }
 
