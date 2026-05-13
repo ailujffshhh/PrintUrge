@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Document Printing | PrintUrge</title>
+  <link rel="stylesheet" href="../../css/style.css"/>
+  <link rel="stylesheet" href="../../css/toast.css"/>
+</head>
+<body class="service-page">
+  <div data-include="site-header"></div>
+
+  <main id="top">
+    <section class="section service-hero">
+      <div class="container service-hero-grid">
+        <div class="service-hero-copy">
+          <span class="badge">Service</span>
+          <h1>Document Printing</h1>
+          <p>
+            Fast, clean prints for essays, forms, handouts, and office documents. Choose your
+            paper size, color mode, and finish with confidence.
+          </p>
+          <div class="service-hero-actions">
+            <a href="#upload" class="btn btn-primary">Start a request</a>
+          </div>
+        </div>
+
+        <div class="hero-panel" id="upload">
+          <article class="card upload-card">
+            <h2>Document Printing</h2>
+
+            <form class="quick-form" id="quick-form" novalidate>
+              <input type="hidden" id="service-type" value="document"/>
+              <div class="quick-layout is-document" id="quick-layout">
+
+                <label class="drop-zone slot-file" id="drop-zone">
+                  <input type="file" id="print-file" multiple hidden/>
+                  <p id="file-status" class="file-status">No files selected</p>
+                  <div class="drop-content">
+                    <strong>Drag &amp; drop files here</strong>
+                    <span>or click to add files</span>
+                  </div>
+                </label>
+
+                <div class="quick-slot slot-copies">
+                  <label class="field">
+                    <span>Copies</span>
+                    <input id="copies" type="number" min="1" value="1"/>
+                  </label>
+                </div>
+
+                <div class="quick-slot slot-color">
+                  <label class="field">
+                    <span id="color-label">Color Mode</span>
+                    <select id="color-mode">
+                      <option value="bw">Black and White</option>
+                      <option value="color">Full Color</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="quick-slot slot-paper">
+                  <label class="field">
+                    <span id="size-label">Paper Size</span>
+                    <select id="paper-size">
+                      <option value="a4">A4</option>
+                      <option value="long">Long Bond</option>
+                      <option value="a3">A3</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="quick-slot slot-pages" id="slot-pages">
+                  <label class="field">
+                    <span id="pages-label">Pages</span>
+                    <input id="pages" type="number" min="1" value="1"/>
+                  </label>
+                </div>
+
+                <div class="quick-slot slot-custom slot-custom-hidden" id="slot-custom">
+                  <div class="field">
+                    <span>Custom Size (ft)</span>
+                    <div class="custom-size-inputs">
+                      <label class="custom-dim-label">
+                        <span>Width</span>
+                        <input id="custom-width" type="number" min="0.5" step="0.5" placeholder="e.g. 5"/>
+                      </label>
+                      <span class="dim-separator">×</span>
+                      <label class="custom-dim-label">
+                        <span>Height</span>
+                        <input id="custom-height" type="number" min="0.5" step="0.5" placeholder="e.g. 10"/>
+                      </label>
+                      <span class="dim-unit">ft</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <button type="button" class="btn btn-primary full-width" id="submit-btn">Submit Print Request</button>
+              <button type="button" class="btn btn-outline full-width" id="preview-btn">Preview Files</button>
+            </form>
+          </article>
+
+          <div class="preview-popup" id="preview-popup">
+            <div class="preview-box">
+              <div class="preview-header">
+                <span id="preview-filename">No file selected</span>
+                <button type="button" id="confirm-file" class="btn-confirm">Looks Good</button>
+              </div>
+              <div class="preview-body">
+                <div class="preview-slider" id="preview-slider"></div>
+                <div class="slider-controls">
+                  <button type="button" id="prev-file">‹</button>
+                  <span id="slide-index">0 / 0</span>
+                  <button type="button" id="next-file">›</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div data-include="auth-modal"></div>
+
+  <script src="../../js/toast.js"></script>
+  <script src="../../js/session.js"></script>
+  <script src="../../js/main.js"></script>
+  <script src="../../js/quick-print.js"></script>
+</body>
+</html>

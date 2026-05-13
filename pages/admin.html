@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin | PrintUrge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/toast.css"/>
+</head>
+<body class="service-page admin-page">
+
+  <div data-include="site-header"></div>
+
+  <main id="top" class="section">
+    <div class="container admin-dashboard">
+
+      <div class="section-intro">
+        <span class="badge">Admin</span>
+        <h1>Print requests</h1>
+        <p>Create, read, update, and archive customer submissions. The same PrintUrge styling applies across the site.</p>
+      </div>
+
+      <section id="admin-gate" class="card admin-gate">
+        <h2 class="auth-title" style="margin-bottom:0.5rem">Admin sign in</h2>
+        <p class="section-intro" style="margin-bottom:1rem">Use an account with the admin role.</p>
+        <form class="auth-form" id="admin-login-form">
+          <label class="field"><span>Email</span><input type="email" name="email" autocomplete="username" required/></label>
+          <label class="field"><span>Password</span><input type="password" name="password" autocomplete="current-password" required/></label>
+          <button type="submit" class="btn btn-primary full-width">Sign in</button>
+        </form>
+      </section>
+
+      <section id="admin-app" hidden>
+        <div class="admin-toolbar">
+          <div class="admin-filters" id="admin-status-filters">
+            <button type="button" class="btn btn-outline is-active" data-status="active">Active</button>
+            <button type="button" class="btn btn-outline" data-status="archived">Archived</button>
+            <button type="button" class="btn btn-outline" data-status="all">All</button>
+          </div>
+          <button type="button" class="btn btn-primary" id="admin-open-create">Create request</button>
+        </div>
+
+        <div class="admin-table-wrap">
+          <table class="admin-table" aria-label="Print requests">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Service</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody id="admin-rows"></tbody>
+          </table>
+        </div>
+
+        <article class="card" id="admin-create" hidden>
+          <h2 style="margin-bottom:0.75rem">Create print request</h2>
+          <p style="color:var(--muted); margin:0 0 1rem">Upload at least one file. Optional customer user ID links the row to a registered client.</p>
+          <form class="quick-form" id="admin-create-form">
+            <label class="field"><span>Customer user ID (optional)</span><input type="number" min="1" name="userId" placeholder="e.g. 12"/></label>
+            <label class="field"><span>Service</span>
+              <select name="service" required>
+                <option value="document">Document Printing</option>
+                <option value="photocopy">Photocopying</option>
+                <option value="photoid">Photo and ID Printing</option>
+                <option value="lamination">Lamination</option>
+                <option value="poster">Poster Printing</option>
+                <option value="banner">Banners and Tarpaulin</option>
+                <option value="softbinding">Soft Binding</option>
+                <option value="spiralbinding">Spiral Binding</option>
+              </select>
+            </label>
+            <label class="field"><span>Color / finish</span><input type="text" name="colorMode" placeholder="bw or color"/></label>
+            <label class="field"><span>Size key</span><input type="text" name="size" placeholder="e.g. a4"/></label>
+            <label class="field"><span>Copies</span><input type="number" min="1" name="copies" value="1"/></label>
+            <label class="field"><span>Pages / quantity</span><input type="number" min="1" name="pages" value="1"/></label>
+            <label class="field"><span>Custom width (banner)</span><input type="text" name="customWidth"/></label>
+            <label class="field"><span>Custom height (banner)</span><input type="text" name="customHeight"/></label>
+            <label class="field"><span>Files</span><input type="file" name="files" multiple required/></label>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+              <button type="submit" class="btn btn-primary">Save</button>
+              <button type="button" class="btn btn-outline" id="admin-create-cancel">Cancel</button>
+            </div>
+          </form>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <div class="modal" id="admin-detail-modal" aria-hidden="true">
+    <div class="modal-overlay" data-admin-detail-close></div>
+    <div class="modal-content auth-modal" role="dialog" aria-modal="true" aria-labelledby="admin-detail-title">
+      <div class="modal-header auth-header">
+        <div class="auth-heading">
+          <h2 class="auth-title" id="admin-detail-title">Request</h2>
+          <p class="auth-subtitle" id="admin-detail-sub"></p>
+        </div>
+        <button type="button" class="modal-close" data-admin-detail-close aria-label="Close">Close</button>
+      </div>
+      <div class="modal-panel is-active">
+        <form class="auth-form admin-detail-grid" id="admin-detail-form">
+          <input type="hidden" name="requestId"/>
+          <label class="field"><span>Service</span><input type="text" name="service" required/></label>
+          <label class="field"><span>Color / finish</span><input type="text" name="color_mode"/></label>
+          <label class="field"><span>Size</span><input type="text" name="size_key"/></label>
+          <label class="field"><span>Copies</span><input type="number" min="1" name="copies"/></label>
+          <label class="field"><span>Pages</span><input type="number" min="1" name="pages"/></label>
+          <label class="field"><span>Custom width</span><input type="text" name="custom_width"/></label>
+          <label class="field"><span>Custom height</span><input type="text" name="custom_height"/></label>
+          <label class="field"><span>Admin notes</span><textarea name="admin_notes" rows="3"></textarea></label>
+          <div id="admin-detail-files"></div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+            <button type="submit" class="btn btn-primary">Save changes</button>
+            <button type="button" class="btn btn-outline" id="admin-detail-archive">Archive</button>
+            <button type="button" class="btn btn-outline" id="admin-detail-restore">Restore</button>
+            <button type="button" class="btn btn-outline" data-admin-detail-close>Close</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div data-include="auth-modal"></div>
+
+  <script src="../js/toast.js"></script>
+  <script src="../js/session.js"></script>
+  <script src="../js/main.js"></script>
+  <script src="../js/admin.js"></script>
+</body>
+</html>
