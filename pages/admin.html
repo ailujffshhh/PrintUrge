@@ -119,7 +119,7 @@
 
   <div class="modal" id="admin-detail-modal" aria-hidden="true">
     <div class="modal-overlay" data-admin-detail-close></div>
-    <div class="modal-content auth-modal" role="dialog" aria-modal="true" aria-labelledby="admin-detail-title">
+    <div class="modal-content auth-modal admin-detail-modal" role="dialog" aria-modal="true" aria-labelledby="admin-detail-title">
       <div class="modal-header auth-header">
         <div class="auth-heading">
           <h2 class="auth-title" id="admin-detail-title">Request</h2>
@@ -151,10 +151,10 @@
           <label class="field"><span>Pages</span><input type="number" min="1" name="pages"/></label>
           <label class="field"><span>Custom width</span><input type="text" name="custom_width"/></label>
           <label class="field"><span>Custom height</span><input type="text" name="custom_height"/></label>
-          <label class="field"><span>Customer notes</span><textarea name="customer_notes" rows="3"></textarea></label>
-          <label class="field"><span>Admin notes</span><textarea name="admin_notes" rows="3"></textarea></label>
-          <div id="admin-detail-files"></div>
-          <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
+          <label class="field admin-detail-notes"><span>Customer notes</span><textarea name="customer_notes" rows="2"></textarea></label>
+          <label class="field admin-detail-notes"><span>Admin notes</span><textarea name="admin_notes" rows="2"></textarea></label>
+          <div id="admin-detail-files" class="admin-detail-files"></div>
+          <div class="admin-detail-actions">
             <button type="submit" class="btn btn-primary">Save changes</button>
             <button type="button" class="btn btn-outline" id="admin-detail-paid">Mark paid / approve</button>
             <button type="button" class="btn btn-outline" id="admin-detail-reject-receipt">Reject payment proof</button>
