@@ -48,6 +48,7 @@ try {
         json_response(['error' => 'Account disabled'], 403);
     }
 
+    printurge_invalidate_user_context_cache((int)$row['id']);
     $pdo->prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?')->execute([$row['id']]);
 
     $user = map_user($row);

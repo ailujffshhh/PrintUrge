@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../database/db.php';
+require_once __DIR__ . '/../database/cache.php';
 
 const PRINTURGE_DEFAULT_JWT_SECRET = 'dev-only-change-me';
 
@@ -49,6 +50,38 @@ function db_driver(PDO $pdo): string
     return $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
 }
 
+function printurge_schema_cache_ttl(): int
+{
+    return max(0, (int)(getenv('PRINTURGE_SCHEMA_CACHE_TTL') ?: 3600));
+}
+
+function printurge_user_cache_ttl(): int
+{
+    return max(0, (int)(getenv('PRINTURGE_USER_CACHE_TTL') ?: 30));
+}
+
+function printurge_admin_list_cache_ttl(): int
+{
+    return max(0, (int)(getenv('PRINTURGE_ADMIN_LIST_CACHE_TTL') ?: 10));
+}
+
+function printurge_admin_item_cache_ttl(): int
+{
+    return max(0, (int)(getenv('PRINTURGE_ADMIN_ITEM_CACHE_TTL') ?: 15));
+}
+
+function printurge_admin_cache_generation(): int
+{
+    $g = printurge_cache_get('admin_pr_gen');
+    return (int)($g ?? 0);
+}
+
+function printurge_admin_cache_bump(): void
+{
+    $next = printurge_admin_cache_generation() + 1;
+    printurge_cache_set('admin_pr_gen', $next, 86400 * 365);
+}
+
 function ensure_database_schema(PDO $pdo): void
 {
     static $done = false;
@@ -57,6 +90,12 @@ function ensure_database_schema(PDO $pdo): void
     }
 
     if (db_driver($pdo) !== 'pgsql') {
+        $done = true;
+        return;
+    }
+
+    $schemaTtl = printurge_schema_cache_ttl();
+    if ($schemaTtl > 0 && printurge_cache_get('pgsql_schema_ready') !== null) {
         $done = true;
         return;
     }
@@ -149,6 +188,10 @@ function ensure_database_schema(PDO $pdo): void
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_request_files_request_id ON print_request_files(print_request_id)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_request_files_stored_name ON print_request_files(stored_name)");
 
+    if ($schemaTtl > 0) {
+        printurge_cache_set('pgsql_schema_ready', 1, $schemaTtl);
+    }
+
     $done = true;
 }
 
@@ -237,6 +280,16 @@ function require_admin(): array
 
 function load_user_context(PDO $pdo, $userId)
 {
+    $userId = (int)$userId;
+    $ttl = printurge_user_cache_ttl();
+    $cacheKey = 'user_ctx:' . $userId;
+    if ($ttl > 0) {
+        $cached = printurge_cache_get($cacheKey);
+        if (is_array($cached)) {
+            return $cached;
+        }
+    }
+
     $stmt = $pdo->prepare(
         'SELECT u.id, u.name, u.email, u.status, u.archived_at, r.name AS role
          FROM users u
@@ -246,7 +299,15 @@ function load_user_context(PDO $pdo, $userId)
     );
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
+    if ($ttl > 0 && $row) {
+        printurge_cache_set($cacheKey, $row, $ttl);
+    }
     return $row ?: null;
+}
+
+function printurge_invalidate_user_context_cache(int $userId): void
+{
+    printurge_cache_delete('user_ctx:' . $userId);
 }
 
 function map_user(array $row): array
@@ -380,6 +441,7 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
             $id = (int)$stmt->fetchColumn();
             save_file_rows($pdo, $id, $files);
             $pdo->commit();
+            printurge_admin_cache_bump();
             return ['id' => $id, 'transaction_id' => $transactionId, 'payment_status' => $paymentStatus];
         } catch (Throwable $e) {
             $pdo->rollBack();
@@ -394,6 +456,7 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
         $id = (int)$pdo->lastInsertId();
         save_file_rows($pdo, $id, $files);
         $pdo->commit();
+        printurge_admin_cache_bump();
         return ['id' => $id, 'transaction_id' => $transactionId, 'payment_status' => $paymentStatus];
     } catch (Throwable $e) {
         $pdo->rollBack();

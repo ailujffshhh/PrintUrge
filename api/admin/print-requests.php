@@ -16,6 +16,15 @@ try {
 
     if ($method === 'GET' && !$id) {
         $status = (string)($_GET['status'] ?? 'active');
+        $listTtl = printurge_admin_list_cache_ttl();
+        $gen = printurge_admin_cache_generation();
+        $listKey = 'admin_pr_list:' . $gen . ':' . $status;
+        if ($listTtl > 0) {
+            $cached = printurge_cache_get($listKey);
+            if (is_array($cached) && array_key_exists('items', $cached)) {
+                json_response(['items' => $cached['items']]);
+            }
+        }
         $where = 'WHERE 1=1';
         $params = [];
         if ($status === 'active' || $status === 'archived') {
@@ -34,10 +43,23 @@ try {
              LIMIT 500"
         );
         $stmt->execute($params);
-        json_response(['items' => $stmt->fetchAll()]);
+        $items = $stmt->fetchAll();
+        if ($listTtl > 0) {
+            printurge_cache_set($listKey, ['items' => $items], $listTtl);
+        }
+        json_response(['items' => $items]);
     }
 
     if ($method === 'GET' && $id) {
+        $itemTtl = printurge_admin_item_cache_ttl();
+        $gen = printurge_admin_cache_generation();
+        $itemKey = 'admin_pr_item:' . $gen . ':' . $id;
+        if ($itemTtl > 0) {
+            $cached = printurge_cache_get($itemKey);
+            if (is_array($cached) && array_key_exists('item', $cached)) {
+                json_response(['item' => $cached['item']]);
+            }
+        }
         $stmt = $pdo->prepare(
             'SELECT pr.*, u.name AS user_name, u.email AS user_email
              FROM print_requests pr
@@ -53,6 +75,9 @@ try {
         $files = json_decode((string)($row['files_json'] ?? '[]'), true);
         $row['files'] = is_array($files) ? $files : [];
         unset($row['files_json']);
+        if ($itemTtl > 0) {
+            printurge_cache_set($itemKey, ['item' => $row], $itemTtl);
+        }
         json_response(['item' => $row]);
     }
 
@@ -88,6 +113,7 @@ try {
         if ($stmt->rowCount() < 1) {
             json_response(['error' => $message], 404);
         }
+        printurge_admin_cache_bump();
         json_response(['ok' => true]);
     }
 
@@ -124,6 +150,7 @@ try {
         if ($stmt->rowCount() < 1) {
             json_response(['error' => 'Not found'], 404);
         }
+        printurge_admin_cache_bump();
         json_response(['ok' => true]);
     }
 
