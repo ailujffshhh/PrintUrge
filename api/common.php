@@ -3,8 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../database/db.php';
 
-const PRINTURGE_JWT_SECRET = 'dev-only-change-me';
-const PRINTURGE_UPLOAD_DIR = __DIR__ . '/../uploads/print-requests';
+const PRINTURGE_DEFAULT_JWT_SECRET = 'dev-only-change-me';
 
 function json_response(array $payload, int $status = 200): void
 {
@@ -54,8 +53,13 @@ function sign_token(array $payload): string
     $header = ['alg' => 'HS256', 'typ' => 'JWT'];
     $head = b64url_encode(json_encode($header, JSON_UNESCAPED_SLASHES));
     $body = b64url_encode(json_encode($payload, JSON_UNESCAPED_SLASHES));
-    $sig = hash_hmac('sha256', "{$head}.{$body}", PRINTURGE_JWT_SECRET, true);
+    $sig = hash_hmac('sha256', "{$head}.{$body}", jwt_secret(), true);
     return "{$head}.{$body}." . b64url_encode($sig);
+}
+
+function jwt_secret(): string
+{
+    return getenv('PRINTURGE_JWT_SECRET') ?: PRINTURGE_DEFAULT_JWT_SECRET;
 }
 
 function verify_token($token)
@@ -68,7 +72,7 @@ function verify_token($token)
         return null;
     }
     [$head, $body, $sig] = $parts;
-    $expected = b64url_encode(hash_hmac('sha256', "{$head}.{$body}", PRINTURGE_JWT_SECRET, true));
+    $expected = b64url_encode(hash_hmac('sha256', "{$head}.{$body}", jwt_secret(), true));
     if (!hash_equals($expected, $sig)) {
         return null;
     }
@@ -143,12 +147,8 @@ function int_field($value, int $fallback): int
     return $n === false ? $fallback : (int)$n;
 }
 
-function save_uploaded_files(): array
+function collect_uploaded_files(): array
 {
-    if (!is_dir(PRINTURGE_UPLOAD_DIR) && !mkdir(PRINTURGE_UPLOAD_DIR, 0775, true) && !is_dir(PRINTURGE_UPLOAD_DIR)) {
-        json_response(['error' => 'Upload directory is not writable'], 500);
-    }
-
     $files = $_FILES['files'] ?? null;
     if (!$files || empty($files['name'])) {
         json_response(['error' => 'At least one file is required'], 400);
@@ -159,7 +159,7 @@ function save_uploaded_files(): array
     $types = is_array($files['type']) ? $files['type'] : [$files['type']];
     $sizes = is_array($files['size']) ? $files['size'] : [$files['size']];
     $errors = is_array($files['error']) ? $files['error'] : [$files['error']];
-    $saved = [];
+    $collected = [];
 
     foreach ($names as $i => $original) {
         if (($errors[$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
@@ -171,27 +171,28 @@ function save_uploaded_files(): array
         $ext = pathinfo((string)$original, PATHINFO_EXTENSION);
         $ext = preg_replace('/[^a-zA-Z0-9]/', '', $ext ?? '');
         $stored = bin2hex(random_bytes(18)) . ($ext ? ".{$ext}" : '.bin');
-        $target = PRINTURGE_UPLOAD_DIR . '/' . $stored;
-        if (!move_uploaded_file((string)$tmps[$i], $target)) {
-            json_response(['error' => 'Could not save uploaded file'], 500);
+        $content = file_get_contents((string)$tmps[$i]);
+        if ($content === false) {
+            json_response(['error' => 'Could not read uploaded file'], 500);
         }
-        $saved[] = [
+        $collected[] = [
             'storedName' => $stored,
             'originalName' => (string)$original,
             'mime' => (string)($types[$i] ?? ''),
             'size' => (int)($sizes[$i] ?? 0),
+            'content' => $content,
         ];
     }
 
-    if (!$saved) {
+    if (!$collected) {
         json_response(['error' => 'At least one file is required'], 400);
     }
-    return $saved;
+    return $collected;
 }
 
 function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): int
 {
-    $saved = save_uploaded_files();
+    $files = collect_uploaded_files();
     $service = substr(trim((string)($_POST['service'] ?? '')), 0, 64);
     if ($service === '') {
         json_response(['error' => 'service is required'], 400);
@@ -206,7 +207,16 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): int
         }
     }
 
-    $filesJson = json_encode($saved, JSON_UNESCAPED_SLASHES);
+    $metadata = array_map(function (array $file): array {
+        return [
+            'storedName' => $file['storedName'],
+            'originalName' => $file['originalName'],
+            'mime' => $file['mime'],
+            'size' => $file['size'],
+        ];
+    }, $files);
+
+    $filesJson = json_encode($metadata, JSON_UNESCAPED_SLASHES);
     $driver = db_driver($pdo);
     $filesPlaceholder = $driver === 'pgsql' ? '?::jsonb' : '?';
     $sql = 'INSERT INTO print_requests
@@ -226,14 +236,51 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): int
     ];
 
     if ($driver === 'pgsql') {
-        $stmt = $pdo->prepare($sql . ' RETURNING id');
-        $stmt->execute($params);
-        return (int)$stmt->fetchColumn();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare($sql . ' RETURNING id');
+            $stmt->execute($params);
+            $id = (int)$stmt->fetchColumn();
+            save_file_rows($pdo, $id, $files);
+            $pdo->commit();
+            return $id;
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
     }
 
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    return (int)$pdo->lastInsertId();
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $id = (int)$pdo->lastInsertId();
+        save_file_rows($pdo, $id, $files);
+        $pdo->commit();
+        return $id;
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
+
+function save_file_rows(PDO $pdo, int $requestId, array $files): void
+{
+    $stmt = $pdo->prepare(
+        'INSERT INTO print_request_files
+          (print_request_id, stored_name, original_name, mime, size_bytes, content)
+         VALUES (?, ?, ?, ?, ?, ?)'
+    );
+
+    foreach ($files as $file) {
+        $stmt->bindValue(1, $requestId, PDO::PARAM_INT);
+        $stmt->bindValue(2, $file['storedName']);
+        $stmt->bindValue(3, $file['originalName']);
+        $stmt->bindValue(4, $file['mime']);
+        $stmt->bindValue(5, (int)$file['size'], PDO::PARAM_INT);
+        $stmt->bindValue(6, $file['content'], PDO::PARAM_LOB);
+        $stmt->execute();
+    }
 }
 
 function handle_exception(Throwable $e): void

@@ -50,3 +50,17 @@ CREATE TABLE IF NOT EXISTS print_requests (
 CREATE INDEX IF NOT EXISTS idx_print_requests_user_id ON print_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_print_requests_status ON print_requests(status);
 CREATE INDEX IF NOT EXISTS idx_print_requests_created_at ON print_requests(created_at);
+
+CREATE TABLE IF NOT EXISTS print_request_files (
+  id BIGSERIAL PRIMARY KEY,
+  print_request_id BIGINT NOT NULL REFERENCES print_requests(id) ON DELETE CASCADE,
+  stored_name VARCHAR(80) NOT NULL UNIQUE,
+  original_name VARCHAR(255) NOT NULL,
+  mime VARCHAR(160) NULL,
+  size_bytes BIGINT NOT NULL DEFAULT 0,
+  content BYTEA NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_print_request_files_request_id ON print_request_files(print_request_id);
+CREATE INDEX IF NOT EXISTS idx_print_request_files_stored_name ON print_request_files(stored_name);

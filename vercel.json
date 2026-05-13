@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/print-requests.php": {
+      "runtime": "vercel-php@0.9.0",
+      "maxDuration": 60
+    },
+    "api/auth/*.php": {
+      "runtime": "vercel-php@0.9.0",
+      "maxDuration": 60
+    },
+    "api/admin/*.php": {
+      "runtime": "vercel-php@0.9.0",
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/admin",
+      "destination": "/pages/admin.html"
+    }
+  ]
+}
