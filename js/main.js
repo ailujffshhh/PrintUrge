@@ -112,6 +112,23 @@ const escapeHtml = (value) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+const notify = (message, type = "info") => {
+  if (typeof window.showToast === "function") {
+    window.showToast(message, { type });
+  }
+};
+
+const applyAuthSession = (data) => {
+  if (!data || !data.token || !data.user || !data.user.name) {
+    throw new Error("Authentication response was incomplete. Please try again.");
+  }
+  if (typeof window.PrintUrgeSession?.set !== "function") {
+    throw new Error("Session storage is unavailable in this browser.");
+  }
+  window.PrintUrgeSession.set(data.token, data.user);
+  refreshAuthNav();
+};
+
 const refreshAuthNav = () => {
   const wrap = document.querySelector(".nav-actions");
   if (!wrap) return;
@@ -222,13 +239,9 @@ const initDelegatedAuthLinks = () => {
     const logoutBtn = e.target.closest("[data-auth-logout]");
     if (logoutBtn) {
       e.preventDefault();
-      if (typeof window.PrintUrgeSession?.clear === "function") {
-        window.PrintUrgeSession.clear();
-      }
+      if (typeof window.PrintUrgeSession?.clear === "function") window.PrintUrgeSession.clear();
       refreshAuthNav();
-      if (typeof window.showToast === "function") {
-        window.showToast("Signed out.", { type: "info" });
-      }
+      notify("Signed out.", "info");
     }
   });
 };
@@ -308,18 +321,11 @@ const initAuthModal = () => {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "Login failed");
-        if (typeof window.PrintUrgeSession?.set === "function") {
-          window.PrintUrgeSession.set(data.token, data.user);
-        }
-        refreshAuthNav();
-        if (typeof window.showToast === "function") {
-          window.showToast("Signed in.", { type: "success" });
-        }
+        applyAuthSession(data);
+        notify("Signed in.", "success");
         closeModal();
       } catch (err) {
-        if (typeof window.showToast === "function") {
-          window.showToast(err.message || "Login failed", { type: "error" });
-        }
+        notify(err.message || "Login failed", "error");
       }
     });
   }
@@ -331,9 +337,7 @@ const initAuthModal = () => {
       const pw = signupForm.querySelector('[name="signup-password"]');
       const cf = signupForm.querySelector('[name="signup-confirm"]');
       if (pw && cf && pw.value !== cf.value) {
-        if (typeof window.showToast === "function") {
-          window.showToast("Passwords do not match.", { type: "error" });
-        }
+        notify("Passwords do not match.", "error");
         return;
       }
       const name = signupForm.querySelector('[name="signup-name"]')?.value?.trim() || "";
@@ -347,18 +351,11 @@ const initAuthModal = () => {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "Could not create account");
-        if (typeof window.PrintUrgeSession?.set === "function") {
-          window.PrintUrgeSession.set(data.token, data.user);
-        }
-        refreshAuthNav();
-        if (typeof window.showToast === "function") {
-          window.showToast("Account created.", { type: "success" });
-        }
+        applyAuthSession(data);
+        notify("Account created. You are signed in.", "success");
         closeModal();
       } catch (err) {
-        if (typeof window.showToast === "function") {
-          window.showToast(err.message || "Sign up failed", { type: "error" });
-        }
+        notify(err.message || "Sign up failed", "error");
       }
     });
   }

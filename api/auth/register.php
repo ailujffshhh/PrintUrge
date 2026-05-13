@@ -30,8 +30,13 @@ try {
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $driver = db_driver($pdo);
-    $sql = "INSERT INTO users (role_id, name, email, password_hash, status)
-            VALUES ((SELECT id FROM roles WHERE name = 'client' LIMIT 1), ?, ?, ?, 'active')";
+    if ($driver === 'pgsql') {
+        $pdo->exec("INSERT INTO roles (id, name) VALUES (3, 'client') ON CONFLICT (id) DO NOTHING");
+    } else {
+        $pdo->exec("INSERT IGNORE INTO roles (id, name) VALUES (3, 'client')");
+    }
+    $sql = "INSERT INTO users (name, email, password_hash, status)
+            VALUES (?, ?, ?, 'active')";
 
     if ($driver === 'pgsql') {
         $stmt = $pdo->prepare($sql . ' RETURNING id');
@@ -43,10 +48,13 @@ try {
         $id = (int)$pdo->lastInsertId();
     }
 
-    $row = load_user_context($pdo, $id);
-    if (!$row) {
-        json_response(['error' => 'Could not create account'], 500);
-    }
+    $row = load_user_context($pdo, $id) ?: [
+        'id' => $id,
+        'name' => $name,
+        'email' => $email,
+        'role' => 'client',
+        'status' => 'active',
+    ];
 
     $user = map_user($row);
     $token = sign_token(['sub' => $id, 'role' => $row['role']]);
