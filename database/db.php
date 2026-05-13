@@ -8,7 +8,7 @@ function printurge_db(): PDO
         return $pdo;
     }
 
-    $url = getenv('DATABASE_URL') ?: 'postgresql://postgres:01102006Estonio!@db.uyqgehcwduzafpdexpag.supabase.co:5432/postgres';
+    $url = getenv('DATABASE_URL') ?: 'postgresql://postgres.uyqgehcwduzafpdexpag:01102006Estonio!@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres';
     $parts = parse_url($url);
 
     if (!$parts || empty($parts['host']) || empty($parts['path']) || empty($parts['user'])) {
@@ -18,7 +18,7 @@ function printurge_db(): PDO
     $scheme = $parts['scheme'] ?? 'pgsql';
     $driver = strpos($scheme, 'postgres') === 0 ? 'pgsql' : 'mysql';
     $host = $parts['host'];
-    $port = (string)($parts['port'] ?? ($driver === 'pgsql' ? 5432 : 3306));
+    $port = (string)($parts['port'] ?? ($driver === 'pgsql' ? 6543));
     $dbname = ltrim((string)$parts['path'], '/');
     $user = rawurldecode((string)$parts['user']);
     $password = rawurldecode((string)($parts['pass'] ?? ''));
