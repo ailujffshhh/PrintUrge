@@ -16,6 +16,7 @@
   var detailFiles = document.getElementById("admin-detail-files");
   var detailTitle = document.getElementById("admin-detail-title");
   var detailSub = document.getElementById("admin-detail-sub");
+  var detailMarkers = document.getElementById("admin-detail-markers");
   var btnArchive = document.getElementById("admin-detail-archive");
   var btnRestore = document.getElementById("admin-detail-restore");
   var btnPaid = document.getElementById("admin-detail-paid");
@@ -66,6 +67,23 @@
     } catch (_) {
       return String(iso);
     }
+  }
+
+  function hasText(value) {
+    return String(value || "").trim().length > 0;
+  }
+
+  function isNewRequest(item) {
+    return (item.order_status || "submitted") === "submitted" && item.status !== "archived";
+  }
+
+  function markerHtml(item) {
+    var markers = [];
+    if (isNewRequest(item)) markers.push('<span class="admin-marker is-new">New</span>');
+    if (hasText(item.customer_notes)) markers.push('<span class="admin-marker is-note">Customer note</span>');
+    if (hasText(item.admin_notes)) markers.push('<span class="admin-marker is-admin-note">Admin note</span>');
+    if (item.payment_status === "paid") markers.push('<span class="admin-marker is-paid">Paid</span>');
+    return markers.join("");
   }
 
   function setButtonLoading(btn, loading, label) {
@@ -164,17 +182,20 @@
               '<button type="button" class="payment-badge is-unpaid" data-pay-row="' + row.id + '">Unpaid</button>';
           }
           var orderSt = row.order_status || "submitted";
+          var markers = markerHtml(row);
 
           return (
             '<tr data-id="' + row.id + '">' +
-            "<td>" + row.id + "</td>" +
-            "<td>" + escapeHtml(row.transaction_id || "-") + "</td>" +
-            "<td>" + escapeHtml(row.service) + "</td>" +
-            "<td>" + escapeHtml(cust) + "</td>" +
-            "<td>" + payment + "</td>" +
-            "<td>" + escapeHtml(orderSt) + "</td>" +
-            "<td>" + statusBadge + "</td>" +
-            "<td>" + escapeHtml(fmtDate(row.created_at)) + "</td>" +
+            '<td data-label="ID">' + row.id + "</td>" +
+            '<td data-label="Transaction"><span class="admin-transaction-id">' + escapeHtml(row.transaction_id || "-") + "</span>" +
+            (markers ? '<span class="admin-row-markers">' + markers + "</span>" : "") +
+            "</td>" +
+            '<td data-label="Service">' + escapeHtml(row.service) + "</td>" +
+            '<td data-label="Customer">' + escapeHtml(cust) + "</td>" +
+            '<td data-label="Payment">' + payment + "</td>" +
+            '<td data-label="Order">' + escapeHtml(orderSt) + "</td>" +
+            '<td data-label="Status">' + statusBadge + "</td>" +
+            '<td data-label="Created">' + escapeHtml(fmtDate(row.created_at)) + "</td>" +
             "</tr>"
           );
         })
@@ -196,6 +217,7 @@
       " - " +
       (item.user_name || item.customer_name || "Guest") +
       (item.user_email ? " - " + item.user_email : "");
+    if (detailMarkers) detailMarkers.innerHTML = markerHtml(item);
 
     detailForm.elements.namedItem("requestId").value = String(item.id);
     detailForm.transaction_id.value = item.transaction_id || "";

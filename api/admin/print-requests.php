@@ -34,7 +34,7 @@ try {
         $stmt = $pdo->prepare(
             "SELECT pr.id, pr.transaction_id, pr.service, pr.status, pr.payment_status, pr.payment_method,
                     pr.customer_name, pr.customer_email, pr.order_status, pr.created_at, pr.archived_at,
-                    pr.copies, pr.pages, pr.color_mode, pr.size_key,
+                    pr.copies, pr.pages, pr.color_mode, pr.size_key, pr.customer_notes, pr.admin_notes,
                     u.name AS user_name, u.email AS user_email
              FROM print_requests pr
              LEFT JOIN users u ON u.id = pr.user_id
