@@ -724,7 +724,8 @@ ul {
 }
 
 .field select,
-.field input {
+.field input,
+.field textarea {
 	appearance: none;
 	font: inherit;
 	font-size: 0.95rem;
@@ -734,6 +735,11 @@ ul {
 	padding: 0.66rem 0.75rem;
 	min-height: 44px;
 	color: var(--ink);
+}
+
+.field textarea {
+	resize: vertical;
+	min-height: 88px;
 }
 
 .field input[type="file"] {
@@ -1623,6 +1629,62 @@ ul {
 	border: 1px solid var(--line);
 }
 
+.payment-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.18rem 0.58rem;
+	border-radius: 999px;
+	font: inherit;
+	font-size: 0.75rem;
+	font-weight: 800;
+	border: 1px solid transparent;
+	text-transform: uppercase;
+}
+
+.payment-badge.is-unpaid {
+	background: #ffe8e8;
+	color: #a51f1f;
+	border-color: #ffb6b6;
+	cursor: pointer;
+}
+
+.payment-badge.is-paid {
+	background: #e5fbef;
+	color: #126136;
+	border-color: #aee8c6;
+}
+
+.admin-loading {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.55rem;
+	font-weight: 700;
+	color: var(--muted);
+}
+
+.admin-loading span,
+.btn.is-loading::before {
+	content: "";
+	width: 15px;
+	height: 15px;
+	border-radius: 999px;
+	border: 2px solid currentColor;
+	border-right-color: transparent;
+	animation: printurge-spin 0.75s linear infinite;
+}
+
+.btn.is-loading {
+	opacity: 0.78;
+	cursor: wait;
+}
+
+@keyframes printurge-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
 .admin-detail-grid {
 	display: grid;
 	gap: 0.75rem;
@@ -1638,6 +1700,12 @@ ul {
 	border-bottom: 1px solid var(--line);
 }
 
+.admin-file-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+}
+
 .admin-file-row:last-child {
 	border-bottom: none;
 }
@@ -1647,3 +1715,42 @@ ul {
 	margin: 0 auto;
 }
 
+.payment-step {
+	display: none;
+	gap: 0.75rem;
+}
+
+.payment-step.is-active {
+	display: grid;
+}
+
+.payment-qr-wrap {
+	display: grid;
+	place-items: center;
+	min-height: 240px;
+	border: 1px dashed var(--line-strong);
+	border-radius: 14px;
+	background: #f8fbff;
+	padding: 1rem;
+}
+
+.payment-qr-wrap img {
+	width: min(260px, 80vw);
+	aspect-ratio: 1;
+	object-fit: contain;
+	border-radius: 12px;
+	background: #fff;
+	border: 1px solid var(--line);
+}
+
+.payment-qr-fallback {
+	text-align: center;
+	color: var(--muted);
+}
+
+.payment-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 0.55rem;
+}

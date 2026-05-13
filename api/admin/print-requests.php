@@ -23,7 +23,8 @@ try {
             $params[] = $status;
         }
         $stmt = $pdo->prepare(
-            "SELECT pr.id, pr.service, pr.status, pr.created_at, pr.archived_at,
+            "SELECT pr.id, pr.transaction_id, pr.service, pr.status, pr.payment_status, pr.payment_method,
+                    pr.customer_name, pr.created_at, pr.archived_at,
                     pr.copies, pr.pages, pr.color_mode, pr.size_key,
                     u.name AS user_name, u.email AS user_email
              FROM print_requests pr
@@ -60,17 +61,28 @@ try {
         if (isset($_POST['userId']) && trim((string)$_POST['userId']) !== '') {
             $forceUserId = (int)$_POST['userId'];
         }
-        $newId = create_print_request($pdo, $forceUserId, false);
-        json_response(['id' => $newId, 'message' => 'Print request created'], 201);
+        $created = create_print_request($pdo, $forceUserId, false);
+        json_response([
+            'id' => $created['id'],
+            'transaction_id' => $created['transaction_id'],
+            'payment_status' => $created['payment_status'],
+            'message' => 'Print request created',
+        ], 201);
     }
 
-    if ($method === 'POST' && $id && ($action === 'archive' || $action === 'restore')) {
+    if ($method === 'POST' && $id && ($action === 'archive' || $action === 'restore' || $action === 'mark-paid' || $action === 'mark-unpaid')) {
         if ($action === 'archive') {
             $stmt = $pdo->prepare("UPDATE print_requests SET status = 'archived', archived_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'active'");
             $message = 'Not found or already archived';
-        } else {
+        } elseif ($action === 'restore') {
             $stmt = $pdo->prepare("UPDATE print_requests SET status = 'active', archived_at = NULL WHERE id = ? AND status = 'archived'");
             $message = 'Not found or not archived';
+        } elseif ($action === 'mark-paid') {
+            $stmt = $pdo->prepare("UPDATE print_requests SET payment_status = 'paid' WHERE id = ?");
+            $message = 'Not found';
+        } else {
+            $stmt = $pdo->prepare("UPDATE print_requests SET payment_status = 'unpaid' WHERE id = ?");
+            $message = 'Not found';
         }
         $stmt->execute([$id]);
         if ($stmt->rowCount() < 1) {
@@ -90,6 +102,10 @@ try {
             'custom_width' => function ($v) { return $v === null || $v === '' ? null : substr(trim((string)$v), 0, 32); },
             'custom_height' => function ($v) { return $v === null || $v === '' ? null : substr(trim((string)$v), 0, 32); },
             'admin_notes' => function ($v) { return $v === null ? null : substr((string)$v, 0, 8000); },
+            'payment_status' => function ($v) { return $v === 'paid' ? 'paid' : 'unpaid'; },
+            'payment_method' => function ($v) { return $v === null || $v === '' ? null : substr(trim((string)$v), 0, 80); },
+            'customer_name' => function ($v) { return $v === null || $v === '' ? null : substr(trim((string)$v), 0, 160); },
+            'customer_notes' => function ($v) { return $v === null ? null : substr((string)$v, 0, 2000); },
         ];
         $fields = [];
         $values = [];

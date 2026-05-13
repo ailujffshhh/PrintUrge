@@ -31,7 +31,12 @@ CREATE INDEX IF NOT EXISTS idx_users_archived_at ON users(archived_at);
 
 CREATE TABLE IF NOT EXISTS print_requests (
   id BIGSERIAL PRIMARY KEY,
+  transaction_id VARCHAR(40) NULL UNIQUE,
   user_id BIGINT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+  customer_name VARCHAR(160) NULL,
+  customer_notes TEXT NULL,
+  payment_method VARCHAR(80) NULL,
+  payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('paid', 'unpaid')),
   service VARCHAR(64) NOT NULL,
   color_mode VARCHAR(64) NULL,
   size_key VARCHAR(64) NULL,
@@ -49,6 +54,7 @@ CREATE TABLE IF NOT EXISTS print_requests (
 
 CREATE INDEX IF NOT EXISTS idx_print_requests_user_id ON print_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_print_requests_status ON print_requests(status);
+CREATE INDEX IF NOT EXISTS idx_print_requests_payment_status ON print_requests(payment_status);
 CREATE INDEX IF NOT EXISTS idx_print_requests_created_at ON print_requests(created_at);
 
 CREATE TABLE IF NOT EXISTS print_request_files (

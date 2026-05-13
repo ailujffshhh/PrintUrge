@@ -265,6 +265,7 @@
   var files      = [];
   var objectUrls = [];
   var currentIdx = 0;
+  var pendingSubmit = null;
 
   // ── Drag & drop ──────────────────────────────────────
   dropZone.addEventListener("dragover", function (e) {
@@ -433,6 +434,147 @@
   /* ─────────────────────────────────────────────────────────────────
    * 7. FORM SUBMISSION
    * ───────────────────────────────────────────────────────────────── */
+  function setButtonLoading(btn, loading, label) {
+    if (!btn) return;
+    if (loading) {
+      btn.dataset.originalText = btn.textContent;
+      btn.disabled = true;
+      btn.classList.add("is-loading");
+      btn.textContent = label || "Loading...";
+    } else {
+      btn.disabled = false;
+      btn.classList.remove("is-loading");
+      if (btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+      delete btn.dataset.originalText;
+    }
+  }
+
+  function isSignedIn() {
+    var s = window.PrintUrgeSession && window.PrintUrgeSession.get && window.PrintUrgeSession.get();
+    return !!(s && s.user);
+  }
+
+  function getQrSrc() {
+    if (window.PRINTURGE_QR_SRC) return window.PRINTURGE_QR_SRC;
+    var basePath = typeof window.PrintUrgeApiPath === "function" ? window.PrintUrgeApiPath("/") : "/";
+    return basePath.replace(/\/$/, "") + "/asssets/payment-qr.png";
+  }
+
+  function ensurePaymentModal() {
+    var modal = document.getElementById("guest-payment-modal");
+    if (modal) return modal;
+    modal = document.createElement("div");
+    modal.className = "modal payment-modal";
+    modal.id = "guest-payment-modal";
+    modal.setAttribute("aria-hidden", "true");
+    modal.innerHTML =
+      '<div class="modal-overlay" data-payment-close></div>' +
+      '<div class="modal-content auth-modal" role="dialog" aria-modal="true" aria-labelledby="payment-title">' +
+        '<div class="modal-header auth-header"><div class="auth-heading">' +
+          '<h2 class="auth-title" id="payment-title">Customer details</h2>' +
+          '<p class="auth-subtitle" id="payment-subtitle">Add your details before sending.</p>' +
+        '</div><button type="button" class="modal-close" data-payment-close aria-label="Close">Close</button></div>' +
+        '<form class="auth-form payment-step is-active" id="payment-details-step">' +
+          '<label class="field"><span>Name</span><input type="text" name="customerName" required></label>' +
+          '<label class="field"><span>Notes</span><textarea name="customerNotes" rows="3" placeholder="Paper instructions, pickup notes, or contact details"></textarea></label>' +
+          '<label class="field"><span>Payment method</span><select name="paymentMethod" required><option value="bank_qr">Bank QR</option><option value="cash">Cash on pickup</option><option value="other">Other manual payment</option></select></label>' +
+          '<button type="submit" class="btn btn-primary full-width">Continue to payment</button>' +
+        '</form>' +
+        '<div class="payment-step" id="payment-qr-step">' +
+          '<div class="payment-qr-wrap"><img src="' + getQrSrc() + '" alt="Banking QR code" onerror="this.style.display=\'none\'; this.nextElementSibling.hidden=false;"><p hidden class="payment-qr-fallback">Add your banking QR image at <strong>asssets/payment-qr.png</strong>.</p></div>' +
+          '<p class="auth-hint">Complete the bank transfer manually, then click Paid to send the print request.</p>' +
+          '<div class="payment-actions"><button type="button" class="btn btn-outline" data-payment-back>Back</button><button type="button" class="btn btn-primary" data-payment-paid>Paid</button></div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    modal.querySelectorAll("[data-payment-close]").forEach(function (el) {
+      el.addEventListener("click", closePaymentModal);
+    });
+    modal.querySelector("[data-payment-back]").addEventListener("click", function () {
+      showPaymentStep("details");
+    });
+    modal.querySelector("#payment-details-step").addEventListener("submit", function (e) {
+      e.preventDefault();
+      showPaymentStep("qr");
+    });
+    modal.querySelector("[data-payment-paid]").addEventListener("click", function () {
+      var details = readPaymentDetails();
+      if (!details.customerName) {
+        showPaymentStep("details");
+        notify("Please enter your name.", "error");
+        return;
+      }
+      details.paymentStatus = "paid";
+      if (pendingSubmit) sendPrintRequest(pendingSubmit, details);
+    });
+    return modal;
+  }
+
+  function showPaymentStep(step) {
+    var modal = ensurePaymentModal();
+    modal.querySelector("#payment-details-step").classList.toggle("is-active", step === "details");
+    modal.querySelector("#payment-qr-step").classList.toggle("is-active", step === "qr");
+    modal.querySelector("#payment-title").textContent = step === "qr" ? "Manual payment" : "Customer details";
+    modal.querySelector("#payment-subtitle").textContent = step === "qr" ? "Scan the QR code with your banking app." : "Add your details before sending.";
+  }
+
+  function openPaymentModal(formData) {
+    pendingSubmit = formData;
+    var modal = ensurePaymentModal();
+    showPaymentStep("details");
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("is-modal-open");
+  }
+
+  function closePaymentModal() {
+    var modal = document.getElementById("guest-payment-modal");
+    if (!modal) return;
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("is-modal-open");
+    pendingSubmit = null;
+  }
+
+  function readPaymentDetails() {
+    var modal = ensurePaymentModal();
+    return {
+      customerName: modal.querySelector('[name="customerName"]').value.trim(),
+      customerNotes: modal.querySelector('[name="customerNotes"]').value.trim(),
+      paymentMethod: modal.querySelector('[name="paymentMethod"]').value,
+      paymentStatus: "unpaid",
+    };
+  }
+
+  async function sendPrintRequest(formData, paymentDetails) {
+    if (paymentDetails) {
+      formData.set("customerName", paymentDetails.customerName || "");
+      formData.set("customerNotes", paymentDetails.customerNotes || "");
+      formData.set("paymentMethod", paymentDetails.paymentMethod || "");
+      formData.set("paymentStatus", paymentDetails.paymentStatus || "unpaid");
+    }
+    try {
+      setButtonLoading(submitBtn, true, "Sending...");
+      var headers = {};
+      if (window.PrintUrgeSession && typeof window.PrintUrgeSession.getToken === "function") {
+        var tok = window.PrintUrgeSession.getToken();
+        if (tok) headers.Authorization = "Bearer " + tok;
+      }
+      var apiPath = window.PrintUrgeApiPath || function (path) { return path; };
+      var res = await fetch(apiPath("/api/print-requests"), { method: "POST", headers: headers, body: formData });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok) throw new Error(data.detail ? (data.error || "Upload failed") + ": " + data.detail : data.error || "Upload failed");
+      notify("Print request submitted. Transaction " + (data.transaction_id || "created") + ".", "success");
+      closePaymentModal();
+      closePreview(true);
+    } catch (err) {
+      console.error(err);
+      notify(err.message || "We could not submit your request. Check your connection and try again.", "error");
+    } finally {
+      setButtonLoading(submitBtn, false);
+    }
+  }
+
   submitBtn.addEventListener("click", async function () {
     var cfg            = SERVICE_CONFIG[serviceType.value] || SERVICE_CONFIG.document;
     var isBannerCustom = serviceType.value === "banner" && paperSize.value === "custom";
@@ -464,23 +606,13 @@
       formData.append("customHeight", customHeight.value);
     }
 
-    try {
-      var headers = {};
-      if (window.PrintUrgeSession && typeof window.PrintUrgeSession.getToken === "function") {
-        var tok = window.PrintUrgeSession.getToken();
-        if (tok) headers.Authorization = "Bearer " + tok;
-      }
-      var apiPath = window.PrintUrgeApiPath || function (path) { return path; };
-      var res = await fetch(apiPath("/api/print-requests"), { method: "POST", headers: headers, body: formData });
-      if (!res.ok) throw new Error("Upload failed");
-      var data = await res.json();
-      console.log("Upload success:", data);
-      notify("Print request submitted successfully.", "success");
-      closePreview(true);
-    } catch (err) {
-      console.error(err);
-      notify("We could not submit your request. Check your connection and try again.", "error");
+    if (!isSignedIn()) {
+      openPaymentModal(formData);
+      return;
     }
+
+    formData.append("paymentStatus", "unpaid");
+    await sendPrintRequest(formData, null);
   });
 
 })();

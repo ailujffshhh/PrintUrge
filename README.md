@@ -25,6 +25,8 @@ Vercel uses the PHP community runtime configured in `vercel.json`. Uploaded file
 
 The admin page is available at `/pages/admin.html` and `/admin`.
 
+Guest checkout shows the banking QR image from `asssets/payment-qr.png`. Replace that file with your real QR code before going live.
+
 Before deploying:
 
 1. Run `database/printurge.postgres.sql` in Supabase or your PostgreSQL database.

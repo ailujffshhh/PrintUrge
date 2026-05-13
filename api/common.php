@@ -103,7 +103,12 @@ function ensure_database_schema(PDO $pdo): void
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS print_requests (
           id BIGSERIAL PRIMARY KEY,
+          transaction_id VARCHAR(40) NULL UNIQUE,
           user_id BIGINT NULL,
+          customer_name VARCHAR(160) NULL,
+          customer_notes TEXT NULL,
+          payment_method VARCHAR(80) NULL,
+          payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid',
           service VARCHAR(64) NOT NULL,
           color_mode VARCHAR(64) NULL,
           size_key VARCHAR(64) NULL,
@@ -119,8 +124,15 @@ function ensure_database_schema(PDO $pdo): void
           updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     ");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(40) NULL");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS customer_name VARCHAR(160) NULL");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS customer_notes TEXT NULL");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS payment_method VARCHAR(80) NULL");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid'");
+    $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_print_requests_transaction_id ON print_requests(transaction_id)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_user_id ON print_requests(user_id)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_status ON print_requests(status)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_payment_status ON print_requests(payment_status)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_created_at ON print_requests(created_at)");
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS print_request_files (
@@ -217,8 +229,8 @@ function require_auth(): array
 function require_admin(): array
 {
     $auth = require_auth();
-    if (($auth['role'] ?? '') !== 'admin') {
-        json_response(['error' => 'Admin only'], 403);
+    if (!in_array(($auth['role'] ?? ''), ['admin', 'staff'], true)) {
+        json_response(['error' => 'Admin or staff only'], 403);
     }
     return $auth;
 }
@@ -252,6 +264,11 @@ function int_field($value, int $fallback): int
 {
     $n = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     return $n === false ? $fallback : (int)$n;
+}
+
+function generate_transaction_id(): string
+{
+    return 'PU-' . gmdate('Ymd') . '-' . strtoupper(bin2hex(random_bytes(8)));
 }
 
 function collect_uploaded_files(): array
@@ -297,7 +314,7 @@ function collect_uploaded_files(): array
     return $collected;
 }
 
-function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): int
+function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): array
 {
     $files = collect_uploaded_files();
     $service = substr(trim((string)($_POST['service'] ?? '')), 0, 64);
@@ -323,14 +340,27 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): int
         ];
     }, $files);
 
+    $transactionId = generate_transaction_id();
+    $customerName = trim((string)($_POST['customerName'] ?? $_POST['customer_name'] ?? ''));
+    $customerNotes = trim((string)($_POST['customerNotes'] ?? $_POST['customer_notes'] ?? ''));
+    $paymentMethod = trim((string)($_POST['paymentMethod'] ?? $_POST['payment_method'] ?? ''));
+    $paymentStatus = strtolower(trim((string)($_POST['paymentStatus'] ?? $_POST['payment_status'] ?? 'unpaid')));
+    if (!in_array($paymentStatus, ['paid', 'unpaid'], true)) {
+        $paymentStatus = 'unpaid';
+    }
     $filesJson = json_encode($metadata, JSON_UNESCAPED_SLASHES);
     $driver = db_driver($pdo);
     $filesPlaceholder = $driver === 'pgsql' ? '?::jsonb' : '?';
     $sql = 'INSERT INTO print_requests
-        (user_id, service, color_mode, size_key, copies, pages, custom_width, custom_height, files_json, admin_notes, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ' . $filesPlaceholder . ', NULL, ?)';
+        (transaction_id, user_id, customer_name, customer_notes, payment_method, payment_status, service, color_mode, size_key, copies, pages, custom_width, custom_height, files_json, admin_notes, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ' . $filesPlaceholder . ', NULL, ?)';
     $params = [
+        $transactionId,
         $userId,
+        $customerName !== '' ? substr($customerName, 0, 160) : null,
+        $customerNotes !== '' ? substr($customerNotes, 0, 2000) : null,
+        $paymentMethod !== '' ? substr($paymentMethod, 0, 80) : null,
+        $paymentStatus,
         $service,
         substr(trim((string)($_POST['colorMode'] ?? '')), 0, 64) ?: null,
         substr(trim((string)($_POST['size'] ?? '')), 0, 64) ?: null,
@@ -350,7 +380,7 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): int
             $id = (int)$stmt->fetchColumn();
             save_file_rows($pdo, $id, $files);
             $pdo->commit();
-            return $id;
+            return ['id' => $id, 'transaction_id' => $transactionId, 'payment_status' => $paymentStatus];
         } catch (Throwable $e) {
             $pdo->rollBack();
             throw $e;
@@ -364,7 +394,7 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): int
         $id = (int)$pdo->lastInsertId();
         save_file_rows($pdo, $id, $files);
         $pdo->commit();
-        return $id;
+        return ['id' => $id, 'transaction_id' => $transactionId, 'payment_status' => $paymentStatus];
     } catch (Throwable $e) {
         $pdo->rollBack();
         throw $e;

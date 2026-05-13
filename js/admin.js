@@ -18,6 +18,8 @@
   var detailSub = document.getElementById("admin-detail-sub");
   var btnArchive = document.getElementById("admin-detail-archive");
   var btnRestore = document.getElementById("admin-detail-restore");
+  var btnPaid = document.getElementById("admin-detail-paid");
+  var btnUnpaid = document.getElementById("admin-detail-unpaid");
 
   if (!gate || !app || !loginForm) return;
 
@@ -40,12 +42,44 @@
 
   function isAdminSession() {
     var s = window.PrintUrgeSession && window.PrintUrgeSession.get();
-    return !!(s && s.user && s.user.role === "admin");
+    return !!(s && s.user && (s.user.role === "admin" || s.user.role === "staff"));
   }
 
   function apiPath(path) {
     if (typeof window.PrintUrgeApiPath === "function") return window.PrintUrgeApiPath(path);
     return path;
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "-";
+    try {
+      return new Date(iso).toLocaleString();
+    } catch (_) {
+      return String(iso);
+    }
+  }
+
+  function setButtonLoading(btn, loading, label) {
+    if (!btn) return;
+    if (loading) {
+      btn.dataset.originalText = btn.textContent;
+      btn.disabled = true;
+      btn.classList.add("is-loading");
+      btn.textContent = label || "Loading...";
+    } else {
+      btn.disabled = false;
+      btn.classList.remove("is-loading");
+      if (btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+      delete btn.dataset.originalText;
+    }
   }
 
   async function api(path, options) {
@@ -59,7 +93,8 @@
       data = await res.json();
     } catch (_) {}
     if (!res.ok) {
-      var err = new Error(data.error || "Request failed");
+      var message = data.detail ? (data.error || "Request failed") + ": " + data.detail : data.error || "Request failed";
+      var err = new Error(message);
       err.status = res.status;
       throw err;
     }
@@ -73,7 +108,7 @@
     } else {
       gate.hidden = false;
       app.hidden = true;
-      createPanel.hidden = true;
+      if (createPanel) createPanel.hidden = true;
     }
   }
 
@@ -91,59 +126,45 @@
     document.body.classList.add("is-modal-open");
   }
 
-  function fmtDate(iso) {
-    if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleString();
-    } catch (_) {
-      return String(iso);
-    }
-  }
-
   async function loadList() {
-    if (!isAdminSession()) return;
+    if (!isAdminSession() || !rowsEl) return;
+    rowsEl.innerHTML = '<tr><td colspan="7"><div class="admin-loading"><span></span>Loading print requests...</div></td></tr>';
+
     var qs = currentStatus === "all" ? "" : "?status=" + encodeURIComponent(currentStatus);
     var data = await api("/api/admin/print-requests" + qs);
     var items = data.items || [];
+
+    if (!items.length) {
+      rowsEl.innerHTML = '<tr><td colspan="7">No print requests yet.</td></tr>';
+      return;
+    }
+
     rowsEl.innerHTML = items
       .map(function (row) {
-        var cust = row.user_name || row.user_email || "Guest";
-        if (row.user_email && row.user_name) cust = row.user_name + " · " + row.user_email;
-        var badge =
+        var cust = row.user_name || row.customer_name || row.user_email || "Guest";
+        if (row.user_email && row.user_name) cust = row.user_name + " - " + row.user_email;
+        var statusBadge =
           row.status === "archived"
             ? '<span class="admin-badge is-archived">Archived</span>'
             : '<span class="admin-badge is-active">Active</span>';
+        var payment =
+          row.payment_status === "paid"
+            ? '<span class="payment-badge is-paid">Paid</span>'
+            : '<button type="button" class="payment-badge is-unpaid" data-pay-row="' + row.id + '">Unpaid</button>';
+
         return (
-          "<tr data-id=\"" +
-          row.id +
-          "\">" +
-          "<td>" +
-          row.id +
-          "</td>" +
-          "<td>" +
-          escapeHtml(row.service) +
-          "</td>" +
-          "<td>" +
-          escapeHtml(cust) +
-          "</td>" +
-          "<td>" +
-          badge +
-          "</td>" +
-          "<td>" +
-          escapeHtml(fmtDate(row.created_at)) +
-          "</td>" +
+          '<tr data-id="' + row.id + '">' +
+          "<td>" + row.id + "</td>" +
+          "<td>" + escapeHtml(row.transaction_id || "-") + "</td>" +
+          "<td>" + escapeHtml(row.service) + "</td>" +
+          "<td>" + escapeHtml(cust) + "</td>" +
+          "<td>" + payment + "</td>" +
+          "<td>" + statusBadge + "</td>" +
+          "<td>" + escapeHtml(fmtDate(row.created_at)) + "</td>" +
           "</tr>"
         );
       })
       .join("");
-  }
-
-  function escapeHtml(s) {
-    return String(s ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
   }
 
   async function openRow(id) {
@@ -152,8 +173,16 @@
     var item = data.item;
     detailTitle.textContent = "Request #" + item.id;
     detailSub.textContent =
-      (item.user_name || "Guest") + (item.user_email ? " · " + item.user_email : "");
+      (item.transaction_id || "No transaction ID") +
+      " - " +
+      (item.user_name || item.customer_name || "Guest") +
+      (item.user_email ? " - " + item.user_email : "");
+
     detailForm.elements.namedItem("requestId").value = String(item.id);
+    detailForm.transaction_id.value = item.transaction_id || "";
+    detailForm.customer_name.value = item.customer_name || item.user_name || "";
+    detailForm.payment_method.value = item.payment_method || "";
+    detailForm.payment_status.value = item.payment_status || "unpaid";
     detailForm.service.value = item.service || "";
     detailForm.color_mode.value = item.color_mode || "";
     detailForm.size_key.value = item.size_key || "";
@@ -161,59 +190,114 @@
     detailForm.pages.value = item.pages || 1;
     detailForm.custom_width.value = item.custom_width || "";
     detailForm.custom_height.value = item.custom_height || "";
+    detailForm.customer_notes.value = item.customer_notes || "";
     detailForm.admin_notes.value = item.admin_notes || "";
 
     var files = item.files || [];
     detailFiles.innerHTML =
-      "<p style=\"font-weight:700;margin:0 0 .35rem\">Files</p>" +
+      '<p style="font-weight:700;margin:0 0 .35rem">Files</p>' +
       files
-        .map(function (f, i) {
+        .map(function (f) {
           return (
-            "<div class=\"admin-file-row\"><span>" +
+            '<div class="admin-file-row"><span>' +
             escapeHtml(f.originalName || f.storedName) +
-            "</span><button type=\"button\" class=\"btn btn-outline\" data-dl=\"" +
+            '</span><div class="admin-file-actions">' +
+            '<button type="button" class="btn btn-outline" data-dl="' +
             escapeHtml(f.storedName) +
-            "\">Download</button></div>"
+            '">Download</button>' +
+            '<button type="button" class="btn btn-primary" data-print-file="' +
+            escapeHtml(f.storedName) +
+            '">Print file</button></div></div>'
           );
         })
         .join("");
 
     btnArchive.hidden = item.status !== "active";
     btnRestore.hidden = item.status !== "archived";
+    if (btnPaid) btnPaid.hidden = item.payment_status === "paid";
+    if (btnUnpaid) btnUnpaid.hidden = item.payment_status !== "paid";
 
     openDetail();
   }
 
-  async function downloadFile(storedName, originalName) {
+  async function fetchFileBlob(storedName) {
     var res = await fetch(apiPath("/api/admin/files/" + encodeURIComponent(storedName)), {
       headers: { Authorization: "Bearer " + token() },
     });
-    if (!res.ok) {
-      notify("Download failed.", "error");
-      return;
+    if (!res.ok) throw new Error("Could not load file");
+    return res.blob();
+  }
+
+  async function downloadFile(storedName, originalName) {
+    try {
+      var blob = await fetchFileBlob(storedName);
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = originalName || storedName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      notify(err.message || "Download failed.", "error");
     }
-    var blob = await res.blob();
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = originalName || storedName;
-    a.click();
-    URL.revokeObjectURL(url);
+  }
+
+  async function printFile(storedName, btn) {
+    try {
+      setButtonLoading(btn, true, "Opening...");
+      var blob = await fetchFileBlob(storedName);
+      var url = URL.createObjectURL(blob);
+      var win = window.open(url, "_blank");
+      if (!win) {
+        notify("Allow popups to print this file.", "error");
+        URL.revokeObjectURL(url);
+        return;
+      }
+      setTimeout(function () {
+        try {
+          win.focus();
+          win.print();
+        } catch (_) {}
+        setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+      }, 700);
+    } catch (err) {
+      notify(err.message || "Could not print file.", "error");
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
+
+  async function markPayment(id, paid, sourceBtn) {
+    try {
+      setButtonLoading(sourceBtn || (paid ? btnPaid : btnUnpaid), true, paid ? "Marking..." : "Updating...");
+      await api("/api/admin/print-requests/" + encodeURIComponent(id) + "/" + (paid ? "mark-paid" : "mark-unpaid"), {
+        method: "POST",
+      });
+      notify(paid ? "Marked as paid." : "Marked as unpaid.", "success");
+      await loadList();
+      if (selectedId === id) await openRow(id);
+    } catch (err) {
+      notify(err.message || "Payment update failed", "error");
+    } finally {
+      setButtonLoading(sourceBtn || (paid ? btnPaid : btnUnpaid), false);
+    }
   }
 
   loginForm.addEventListener("submit", async function (e) {
     e.preventDefault();
+    var submit = loginForm.querySelector('button[type="submit"]');
     var email = loginForm.querySelector('[name="email"]').value.trim();
     var password = loginForm.querySelector('[name="password"]').value;
     try {
+      setButtonLoading(submit, true, "Signing in...");
       var data = await api("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email, password: password }),
       });
-      if (data.user.role !== "admin") {
+      if (data.user.role !== "admin" && data.user.role !== "staff") {
         window.PrintUrgeSession.clear();
-        notify("This account is not an admin.", "error");
+        notify("This account is not admin or staff.", "error");
         return;
       }
       window.PrintUrgeSession.set(data.token, data.user);
@@ -223,6 +307,8 @@
       notify("Welcome back.", "success");
     } catch (err) {
       notify(err.message || "Sign in failed", "error");
+    } finally {
+      setButtonLoading(submit, false);
     }
   });
 
@@ -234,25 +320,43 @@
       filters.querySelectorAll("[data-status]").forEach(function (b) {
         b.classList.toggle("is-active", b === btn);
       });
-      await loadList();
+      try {
+        setButtonLoading(btn, true, "Loading...");
+        await loadList();
+      } finally {
+        setButtonLoading(btn, false);
+      }
     });
   }
 
-  rowsEl.addEventListener("click", function (e) {
-    var tr = e.target.closest("tr[data-id]");
-    if (!tr) return;
-    openRow(Number(tr.getAttribute("data-id"))).catch(function (err) {
-      notify(err.message || "Could not load request", "error");
+  if (rowsEl) {
+    rowsEl.addEventListener("click", function (e) {
+      var payBtn = e.target.closest("[data-pay-row]");
+      if (payBtn) {
+        e.stopPropagation();
+        markPayment(Number(payBtn.getAttribute("data-pay-row")), true, payBtn);
+        return;
+      }
+      var tr = e.target.closest("tr[data-id]");
+      if (!tr) return;
+      openRow(Number(tr.getAttribute("data-id"))).catch(function (err) {
+        notify(err.message || "Could not load request", "error");
+      });
     });
-  });
+  }
 
-  detailFiles.addEventListener("click", function (e) {
-    var b = e.target.closest("[data-dl]");
-    if (!b) return;
-    var stored = b.getAttribute("data-dl");
-    var label = b.closest(".admin-file-row") && b.closest(".admin-file-row").querySelector("span");
-    downloadFile(stored, label ? label.textContent : stored);
-  });
+  if (detailFiles) {
+    detailFiles.addEventListener("click", function (e) {
+      var dl = e.target.closest("[data-dl]");
+      if (dl) {
+        var label = dl.closest(".admin-file-row") && dl.closest(".admin-file-row").querySelector("span");
+        downloadFile(dl.getAttribute("data-dl"), label ? label.textContent : dl.getAttribute("data-dl"));
+        return;
+      }
+      var pr = e.target.closest("[data-print-file]");
+      if (pr) printFile(pr.getAttribute("data-print-file"), pr);
+    });
+  }
 
   if (detailModal) {
     detailModal.querySelectorAll("[data-admin-detail-close]").forEach(function (el) {
@@ -265,6 +369,7 @@
 
   detailForm.addEventListener("submit", async function (e) {
     e.preventDefault();
+    var submit = detailForm.querySelector('button[type="submit"]');
     var id = Number(detailForm.elements.namedItem("requestId").value);
     var body = {
       service: detailForm.service.value.trim(),
@@ -274,9 +379,13 @@
       pages: detailForm.pages.value,
       custom_width: detailForm.custom_width.value.trim() || null,
       custom_height: detailForm.custom_height.value.trim() || null,
+      customer_name: detailForm.customer_name.value.trim() || null,
+      customer_notes: detailForm.customer_notes.value,
+      payment_method: detailForm.payment_method.value.trim() || null,
       admin_notes: detailForm.admin_notes.value,
     };
     try {
+      setButtonLoading(submit, true, "Saving...");
       await api("/api/admin/print-requests/" + encodeURIComponent(id), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -287,42 +396,64 @@
       closeDetail();
     } catch (err) {
       notify(err.message || "Save failed", "error");
+    } finally {
+      setButtonLoading(submit, false);
     }
   });
+
+  if (btnPaid) {
+    btnPaid.addEventListener("click", function () {
+      markPayment(Number(detailForm.elements.namedItem("requestId").value), true, btnPaid);
+    });
+  }
+
+  if (btnUnpaid) {
+    btnUnpaid.addEventListener("click", function () {
+      markPayment(Number(detailForm.elements.namedItem("requestId").value), false, btnUnpaid);
+    });
+  }
 
   btnArchive.addEventListener("click", async function () {
     var id = Number(detailForm.elements.namedItem("requestId").value);
     try {
+      setButtonLoading(btnArchive, true, "Archiving...");
       await api("/api/admin/print-requests/" + encodeURIComponent(id) + "/archive", { method: "POST" });
       notify("Archived.", "success");
       await loadList();
       closeDetail();
     } catch (err) {
       notify(err.message || "Archive failed", "error");
+    } finally {
+      setButtonLoading(btnArchive, false);
     }
   });
 
   btnRestore.addEventListener("click", async function () {
     var id = Number(detailForm.elements.namedItem("requestId").value);
     try {
+      setButtonLoading(btnRestore, true, "Restoring...");
       await api("/api/admin/print-requests/" + encodeURIComponent(id) + "/restore", { method: "POST" });
       notify("Restored to active.", "success");
       await loadList();
       closeDetail();
     } catch (err) {
       notify(err.message || "Restore failed", "error");
+    } finally {
+      setButtonLoading(btnRestore, false);
     }
   });
 
   openCreateBtn.addEventListener("click", function () {
     createPanel.hidden = !createPanel.hidden;
   });
+
   createCancel.addEventListener("click", function () {
     createPanel.hidden = true;
   });
 
   createForm.addEventListener("submit", async function (e) {
     e.preventDefault();
+    var submit = createForm.querySelector('button[type="submit"]');
     var fd = new FormData();
     var fileInput = createForm.querySelector('input[type="file"]');
     var files = fileInput.files;
@@ -338,24 +469,28 @@
     fd.append("pages", createForm.pages.value || "1");
     if (createForm.customWidth.value) fd.append("customWidth", createForm.customWidth.value);
     if (createForm.customHeight.value) fd.append("customHeight", createForm.customHeight.value);
-    var uid = createForm.userId.value.trim();
-    if (uid) fd.append("userId", uid);
+    if (createForm.userId.value.trim()) fd.append("userId", createForm.userId.value.trim());
+    if (createForm.customerName.value.trim()) fd.append("customerName", createForm.customerName.value.trim());
+    if (createForm.customerNotes.value.trim()) fd.append("customerNotes", createForm.customerNotes.value.trim());
+    if (createForm.paymentMethod.value) fd.append("paymentMethod", createForm.paymentMethod.value);
+    fd.append("paymentStatus", createForm.paymentStatus.value || "unpaid");
 
     try {
+      setButtonLoading(submit, true, "Saving...");
       var headers = {};
       var tok = token();
       if (tok) headers.Authorization = "Bearer " + tok;
       var res = await fetch(apiPath("/api/admin/print-requests"), { method: "POST", headers: headers, body: fd });
-      var data = await res.json().catch(function () {
-        return {};
-      });
-      if (!res.ok) throw new Error(data.error || "Create failed");
-      notify("Request created.", "success");
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok) throw new Error(data.detail ? (data.error || "Create failed") + ": " + data.detail : data.error || "Create failed");
+      notify("Request created. Transaction " + (data.transaction_id || ""), "success");
       createForm.reset();
       createPanel.hidden = true;
       await loadList();
     } catch (err) {
       notify(err.message || "Create failed", "error");
+    } finally {
+      setButtonLoading(submit, false);
     }
   });
 

@@ -123,6 +123,21 @@ const apiErrorMessage = (data, fallback) =>
     ? `${data.error || fallback}: ${data.detail || ""}`.replace(/:\s*$/, "")
     : fallback;
 
+const setButtonLoading = (btn, loading, label = "Loading...") => {
+  if (!btn) return;
+  if (loading) {
+    btn.dataset.originalText = btn.textContent;
+    btn.disabled = true;
+    btn.classList.add("is-loading");
+    btn.textContent = label;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove("is-loading");
+    if (btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+    delete btn.dataset.originalText;
+  }
+};
+
 const applyAuthSession = (data) => {
   if (!data || !data.token || !data.user || !data.user.name) {
     throw new Error("Authentication response was incomplete. Please try again.");
@@ -146,7 +161,7 @@ const refreshAuthNav = () => {
 
   if (session && session.user) {
     const adminBtn =
-      session.user.role === "admin"
+      session.user.role === "admin" || session.user.role === "staff"
         ? `<a href="${basePath}pages/admin.html" class="btn btn-outline">Admin</a>`
         : "";
     wrap.innerHTML = `
@@ -316,9 +331,11 @@ const initAuthModal = () => {
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+      const submit = loginForm.querySelector('button[type="submit"]');
       const email = loginForm.querySelector('[name="login-email"]')?.value?.trim() || "";
       const password = loginForm.querySelector('[name="login-password"]')?.value || "";
       try {
+        setButtonLoading(submit, true, "Signing in...");
         const res = await fetch(window.PrintUrgeApiPath("/api/auth/login"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -331,6 +348,8 @@ const initAuthModal = () => {
         closeModal();
       } catch (err) {
         notify(err.message || "Login failed", "error");
+      } finally {
+        setButtonLoading(submit, false);
       }
     });
   }
@@ -348,7 +367,9 @@ const initAuthModal = () => {
       const name = signupForm.querySelector('[name="signup-name"]')?.value?.trim() || "";
       const email = signupForm.querySelector('[name="signup-email"]')?.value?.trim() || "";
       const password = pw?.value || "";
+      const submit = signupForm.querySelector('button[type="submit"]');
       try {
+        setButtonLoading(submit, true, "Creating...");
         const res = await fetch(window.PrintUrgeApiPath("/api/auth/register"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -361,6 +382,8 @@ const initAuthModal = () => {
         closeModal();
       } catch (err) {
         notify(err.message || "Sign up failed", "error");
+      } finally {
+        setButtonLoading(submit, false);
       }
     });
   }
