@@ -7,6 +7,7 @@ allow_methods(['GET', 'POST', 'PATCH']);
 
 try {
     $pdo = printurge_db();
+    ensure_database_schema($pdo);
     require_admin();
 
     $method = $_SERVER['REQUEST_METHOD'];

@@ -7,6 +7,7 @@ allow_methods(['GET']);
 
 try {
     $pdo = printurge_db();
+    ensure_database_schema($pdo);
     $auth = require_auth();
     $user = load_user_context($pdo, (int)$auth['sub']);
     if (!$user || !empty($user['archived_at']) || $user['status'] !== 'active') {

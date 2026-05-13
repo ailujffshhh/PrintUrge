@@ -16,6 +16,7 @@ allow_methods(['POST']);
 
 try {
     $pdo = printurge_db();
+    ensure_database_schema($pdo);
     $body = read_json_body();
     if (!$body && $_POST) {
         $body = $_POST;

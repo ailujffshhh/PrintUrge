@@ -7,6 +7,7 @@ allow_methods(['GET']);
 
 try {
     $pdo = printurge_db();
+    ensure_database_schema($pdo);
     require_admin();
     $storedName = (string)($_GET['storedName'] ?? '');
     if (!preg_match('/^[a-f0-9]{36}(\.[a-zA-Z0-9._-]{1,24})?$/i', $storedName)) {

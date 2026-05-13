@@ -16,6 +16,7 @@ allow_methods(['POST']);
 
 try {
     $pdo = printurge_db();
+    ensure_database_schema($pdo);
     $id = create_print_request($pdo, null, true);
     json_response(['id' => $id, 'message' => 'Print request created'], 201);
 } catch (Throwable $e) {

@@ -49,9 +49,95 @@ function db_driver(PDO $pdo): string
     return $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
 }
 
-function now_sql(PDO $pdo): string
+function ensure_database_schema(PDO $pdo): void
 {
-    return db_driver($pdo) === 'pgsql' ? 'CURRENT_TIMESTAMP' : 'CURRENT_TIMESTAMP';
+    static $done = false;
+    if ($done) {
+        return;
+    }
+
+    if (db_driver($pdo) !== 'pgsql') {
+        $done = true;
+        return;
+    }
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS roles (
+          id BIGSERIAL PRIMARY KEY,
+          name VARCHAR(50) NOT NULL UNIQUE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    $pdo->exec("
+        INSERT INTO roles (id, name) VALUES
+          (1, 'admin'),
+          (2, 'staff'),
+          (3, 'client')
+        ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
+    ");
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS users (
+          id BIGSERIAL PRIMARY KEY,
+          role_id BIGINT NOT NULL DEFAULT 3,
+          name VARCHAR(160) NOT NULL,
+          email VARCHAR(255) NOT NULL UNIQUE,
+          password_hash VARCHAR(255) NOT NULL,
+          status VARCHAR(20) NOT NULL DEFAULT 'active',
+          archived_at TIMESTAMPTZ NULL,
+          last_login_at TIMESTAMPTZ NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id BIGINT NOT NULL DEFAULT 3");
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(160)");
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)");
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)");
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active'");
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ NULL");
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ NULL");
+    $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email ON users (email)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_users_role_id ON users (role_id)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_users_archived_at ON users (archived_at)");
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS print_requests (
+          id BIGSERIAL PRIMARY KEY,
+          user_id BIGINT NULL,
+          service VARCHAR(64) NOT NULL,
+          color_mode VARCHAR(64) NULL,
+          size_key VARCHAR(64) NULL,
+          copies INT NOT NULL DEFAULT 1,
+          pages INT NOT NULL DEFAULT 1,
+          custom_width VARCHAR(32) NULL,
+          custom_height VARCHAR(32) NULL,
+          files_json JSONB NOT NULL,
+          admin_notes TEXT NULL,
+          status VARCHAR(20) NOT NULL DEFAULT 'active',
+          archived_at TIMESTAMPTZ NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_user_id ON print_requests(user_id)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_status ON print_requests(status)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_created_at ON print_requests(created_at)");
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS print_request_files (
+          id BIGSERIAL PRIMARY KEY,
+          print_request_id BIGINT NOT NULL,
+          stored_name VARCHAR(80) NOT NULL UNIQUE,
+          original_name VARCHAR(255) NOT NULL,
+          mime VARCHAR(160) NULL,
+          size_bytes BIGINT NOT NULL DEFAULT 0,
+          content BYTEA NOT NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_request_files_request_id ON print_request_files(print_request_id)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_request_files_stored_name ON print_request_files(stored_name)");
+
+    $done = true;
 }
 
 function b64url_encode(string $value): string
@@ -307,5 +393,8 @@ function save_file_rows(PDO $pdo, int $requestId, array $files): void
 function handle_exception(Throwable $e): void
 {
     error_log($e->getMessage());
-    json_response(['error' => 'Server error'], 500);
+    json_response([
+        'error' => 'Server error',
+        'detail' => $e->getMessage(),
+    ], 500);
 }

@@ -118,6 +118,11 @@ const notify = (message, type = "info") => {
   }
 };
 
+const apiErrorMessage = (data, fallback) =>
+  data && (data.detail || data.error)
+    ? `${data.error || fallback}: ${data.detail || ""}`.replace(/:\s*$/, "")
+    : fallback;
+
 const applyAuthSession = (data) => {
   if (!data || !data.token || !data.user || !data.user.name) {
     throw new Error("Authentication response was incomplete. Please try again.");
@@ -320,7 +325,7 @@ const initAuthModal = () => {
           body: JSON.stringify({ email, password }),
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || "Login failed");
+        if (!res.ok) throw new Error(apiErrorMessage(data, "Login failed"));
         applyAuthSession(data);
         notify("Signed in.", "success");
         closeModal();
@@ -350,7 +355,7 @@ const initAuthModal = () => {
           body: JSON.stringify({ name, email, password }),
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || "Could not create account");
+        if (!res.ok) throw new Error(apiErrorMessage(data, "Could not create account"));
         applyAuthSession(data);
         notify("Account created. You are signed in.", "success");
         closeModal();
