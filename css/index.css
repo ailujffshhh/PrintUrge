@@ -107,7 +107,8 @@ ul {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-soft)
+    box-shadow: var(--shadow-soft);
+    padding: 1rem;
 }
 
 .btn {
