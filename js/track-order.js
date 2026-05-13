@@ -44,6 +44,10 @@
     return m[st] || st || "Submitted";
   }
 
+  function orderCacheKey(tid, email) {
+    return "order-status:" + tid + ":" + email;
+  }
+
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
     var tid = form.elements.namedItem("transaction_id").value.trim().toUpperCase();
@@ -55,14 +59,25 @@
     out.hidden = true;
     out.innerHTML = "";
     try {
-      var res = await fetch(apiPath("/api/track-order"), {
+      var requestOptions = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transaction_id: tid, email: email }),
-      });
-      var data = await res.json().catch(function () { return {}; });
-      if (!res.ok) {
-        throw new Error(data.error || "Lookup failed");
+      };
+      var data;
+      if (window.PrintUrgeCache) {
+        data = await window.PrintUrgeCache.cachedJson(
+          orderCacheKey(tid, email),
+          apiPath("/api/track-order"),
+          requestOptions,
+          window.PrintUrgeCache.ttl.oneMinute
+        );
+      } else {
+        var res = await fetch(apiPath("/api/track-order"), requestOptions);
+        data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          throw new Error(data.error || "Lookup failed");
+        }
       }
       var o = data.order;
       out.innerHTML =

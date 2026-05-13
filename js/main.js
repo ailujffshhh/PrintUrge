@@ -201,8 +201,18 @@ const loadSharedPartials = async () => {
 
       if (canFetch) {
         try {
-          const response = await fetch(`${basePath}components/${includeName}.html`);
-          if (response.ok) html = await response.text();
+          const url = `${basePath}components/${includeName}.html`;
+          if (window.PrintUrgeCache) {
+            html = await window.PrintUrgeCache.cachedText(
+              `partial:${basePath}${includeName}`,
+              url,
+              {},
+              window.PrintUrgeCache.ttl.thirtyMinutes
+            );
+          } else {
+            const response = await fetch(url);
+            if (response.ok) html = await response.text();
+          }
         } catch (_) { html = ""; }
       }
 

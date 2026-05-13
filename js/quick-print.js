@@ -976,6 +976,18 @@
     }
   }
 
+  function clearOrderStatusCache(transactionId, paymentDetails) {
+    if (!window.PrintUrgeCache || !transactionId) return;
+    var email = paymentDetails && paymentDetails.customerEmail
+      ? String(paymentDetails.customerEmail).trim().toLowerCase()
+      : "";
+    if (email) {
+      window.PrintUrgeCache.clearCache("order-status:" + transactionId + ":" + email);
+      return;
+    }
+    window.PrintUrgeCache.clearCacheByPrefix("order-status:" + transactionId + ":");
+  }
+
   async function postPrintRequest(formData, paymentDetails, receiptFile) {
     applyPaymentDetails(formData, paymentDetails, receiptFile);
     var headers = {};
@@ -1002,6 +1014,7 @@
     try {
       setButtonLoading(submitBtn, true, "Sending...");
       var data = await postPrintRequest(formData, paymentDetails, receiptFile);
+      clearOrderStatusCache(data.transaction_id, paymentDetails);
       var ps = data.payment_status || "";
       var extra = ps === "pending_review" ? " Payment proof received; staff will confirm shortly." : "";
       notify("Print request submitted. Transaction " + (data.transaction_id || "created") + "." + extra, "success");
@@ -1021,6 +1034,7 @@
       var created = [];
       for (var i = 0; i < items.length; i += 1) {
         var data = await postPrintRequest(formDataFromJob(items[i]), paymentDetails, receiptFile);
+        clearOrderStatusCache(data.transaction_id, paymentDetails);
         created.push(data.transaction_id || ("item " + (i + 1)));
       }
       cartItems = [];
