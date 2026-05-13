@@ -58,6 +58,9 @@
     }
     out.hidden = true;
     out.innerHTML = "";
+    if (window.PrintUrgeSkeleton) {
+      window.PrintUrgeSkeleton.orderResult(out);
+    }
     try {
       var requestOptions = {
         method: "POST",
@@ -80,6 +83,7 @@
         }
       }
       var o = data.order;
+      out.removeAttribute("aria-busy");
       out.innerHTML =
         '<div class="card track-card">' +
         "<h2>Order status</h2>" +
@@ -94,6 +98,9 @@
         "</dl></div>";
       out.hidden = false;
     } catch (err) {
+      if (window.PrintUrgeSkeleton) {
+        window.PrintUrgeSkeleton.error(out, err.message || "We could not load that order yet. Please check the details and try again.");
+      }
       notify(err.message || "Could not find an order.", "error");
     }
   });

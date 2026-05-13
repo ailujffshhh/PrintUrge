@@ -129,50 +129,61 @@
 
   async function loadList() {
     if (!isAdminSession() || !rowsEl) return;
-    rowsEl.innerHTML = '<tr><td colspan="8"><div class="admin-loading"><span></span>Loading print requests...</div></td></tr>';
-
-    var qs = currentStatus === "all" ? "" : "?status=" + encodeURIComponent(currentStatus);
-    var data = await api("/api/admin/print-requests" + qs);
-    var items = data.items || [];
-
-    if (!items.length) {
-      rowsEl.innerHTML = '<tr><td colspan="8">No print requests yet.</td></tr>';
-      return;
+    if (window.PrintUrgeSkeleton) {
+      window.PrintUrgeSkeleton.tableRows(rowsEl, 6, 8);
+    } else {
+      rowsEl.innerHTML = '<tr><td colspan="8"><div class="admin-loading"><span></span>Loading print requests...</div></td></tr>';
     }
 
-    rowsEl.innerHTML = items
-      .map(function (row) {
-        var cust = row.user_name || row.customer_name || row.user_email || "Guest";
-        if (row.user_email && row.user_name) cust = row.user_name + " - " + row.user_email;
-        var statusBadge =
-          row.status === "archived"
-            ? '<span class="admin-badge is-archived">Archived</span>'
-            : '<span class="admin-badge is-active">Active</span>';
-        var payment;
-        if (row.payment_status === "paid") {
-          payment = '<span class="payment-badge is-paid">Paid</span>';
-        } else if (row.payment_status === "pending_review") {
-          payment = '<span class="payment-badge is-pending">Proof</span>';
-        } else {
-          payment =
-            '<button type="button" class="payment-badge is-unpaid" data-pay-row="' + row.id + '">Unpaid</button>';
-        }
-        var orderSt = row.order_status || "submitted";
+    try {
+      var qs = currentStatus === "all" ? "" : "?status=" + encodeURIComponent(currentStatus);
+      var data = await api("/api/admin/print-requests" + qs);
+      var items = data.items || [];
 
-        return (
-          '<tr data-id="' + row.id + '">' +
-          "<td>" + row.id + "</td>" +
-          "<td>" + escapeHtml(row.transaction_id || "-") + "</td>" +
-          "<td>" + escapeHtml(row.service) + "</td>" +
-          "<td>" + escapeHtml(cust) + "</td>" +
-          "<td>" + payment + "</td>" +
-          "<td>" + escapeHtml(orderSt) + "</td>" +
-          "<td>" + statusBadge + "</td>" +
-          "<td>" + escapeHtml(fmtDate(row.created_at)) + "</td>" +
-          "</tr>"
-        );
-      })
-      .join("");
+      rowsEl.removeAttribute("aria-busy");
+      if (!items.length) {
+        rowsEl.innerHTML = '<tr><td colspan="8">No print requests yet.</td></tr>';
+        return;
+      }
+
+      rowsEl.innerHTML = items
+        .map(function (row) {
+          var cust = row.user_name || row.customer_name || row.user_email || "Guest";
+          if (row.user_email && row.user_name) cust = row.user_name + " - " + row.user_email;
+          var statusBadge =
+            row.status === "archived"
+              ? '<span class="admin-badge is-archived">Archived</span>'
+              : '<span class="admin-badge is-active">Active</span>';
+          var payment;
+          if (row.payment_status === "paid") {
+            payment = '<span class="payment-badge is-paid">Paid</span>';
+          } else if (row.payment_status === "pending_review") {
+            payment = '<span class="payment-badge is-pending">Proof</span>';
+          } else {
+            payment =
+              '<button type="button" class="payment-badge is-unpaid" data-pay-row="' + row.id + '">Unpaid</button>';
+          }
+          var orderSt = row.order_status || "submitted";
+
+          return (
+            '<tr data-id="' + row.id + '">' +
+            "<td>" + row.id + "</td>" +
+            "<td>" + escapeHtml(row.transaction_id || "-") + "</td>" +
+            "<td>" + escapeHtml(row.service) + "</td>" +
+            "<td>" + escapeHtml(cust) + "</td>" +
+            "<td>" + payment + "</td>" +
+            "<td>" + escapeHtml(orderSt) + "</td>" +
+            "<td>" + statusBadge + "</td>" +
+            "<td>" + escapeHtml(fmtDate(row.created_at)) + "</td>" +
+            "</tr>"
+          );
+        })
+        .join("");
+    } catch (err) {
+      rowsEl.removeAttribute("aria-busy");
+      rowsEl.innerHTML = '<tr><td colspan="8"><div class="skeleton-error">We could not load print requests. Please try again.</div></td></tr>';
+      notify(err.message || "Could not load print requests.", "error");
+    }
   }
 
   async function openRow(id) {

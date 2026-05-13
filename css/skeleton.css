@@ -1,0 +1,124 @@
+.skeleton-block,
+.skeleton-line,
+.skeleton-card,
+.skeleton-pill,
+.skeleton-icon,
+.skeleton-table-cell {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(90deg, #eef3fa 0%, #f8fbff 48%, #eef3fa 100%);
+    background-size: 220% 100%;
+    animation: printurge-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes printurge-skeleton-shimmer {
+    0% {
+        background-position: 120% 0;
+    }
+    100% {
+        background-position: -120% 0;
+    }
+}
+
+.skeleton-line {
+    display: block;
+    height: 0.82rem;
+    border-radius: 999px;
+}
+
+.skeleton-pill {
+    display: inline-block;
+    width: 7rem;
+    height: 1.8rem;
+    border-radius: 999px;
+}
+
+.skeleton-icon {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 16px;
+    flex: 0 0 auto;
+}
+
+.skeleton-card {
+    border: 1px solid var(--line, #dbe6f4);
+    border-radius: var(--radius-lg, 18px);
+    box-shadow: var(--shadow-soft, 0 12px 30px rgba(15, 27, 61, .08));
+}
+
+.skeleton-services-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.skeleton-service-card {
+    min-height: 10.5rem;
+    padding: 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+}
+
+.skeleton-service-card .skeleton-copy {
+    flex: 1;
+    display: grid;
+    gap: 0.7rem;
+    padding-top: 0.25rem;
+}
+
+.skeleton-order-card {
+    padding: 1.25rem;
+    display: grid;
+    gap: 1rem;
+}
+
+.skeleton-order-grid {
+    display: grid;
+    grid-template-columns: 9rem 1fr;
+    gap: 0.85rem;
+}
+
+.skeleton-table-row td {
+    padding: 0.65rem 0.75rem;
+}
+
+.skeleton-table-cell {
+    display: block;
+    height: 0.92rem;
+    border-radius: 999px;
+}
+
+.skeleton-error {
+    padding: 1rem;
+    border: 1px solid rgba(203, 58, 58, .18);
+    border-radius: var(--radius-lg, 18px);
+    background: #fff6f6;
+    color: #8b1f1f;
+    font-weight: 600;
+}
+
+#services.services-loading .slideshow-wrapper {
+    display: none;
+}
+
+#services:not(.services-loading) #services-skeleton {
+    display: none;
+}
+
+#services-skeleton {
+    margin-top: 1rem;
+}
+
+@media (max-width: 1080px) {
+    .skeleton-services-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 660px) {
+    .skeleton-services-grid,
+    .skeleton-order-grid {
+        grid-template-columns: 1fr;
+    }
+}
