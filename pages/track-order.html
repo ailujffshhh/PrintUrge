@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Track order | PrintUrge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/toast.css"/>
+</head>
+<body class="service-page">
+  <div data-include="site-header"></div>
+  <main id="top" class="section">
+    <div class="container" style="max-width:560px">
+      <div class="section-intro">
+        <span class="badge">Orders</span>
+        <h1>Track your order</h1>
+        <p>Enter the transaction ID from your confirmation message and the email you used at checkout.</p>
+      </div>
+      <form class="auth-form card" id="track-order-form" style="padding:1.5rem">
+        <label class="field"><span>Transaction ID</span>
+          <input type="text" name="transaction_id" required placeholder="PU-20260114-AB12CD34EF56AB78" autocomplete="off"/>
+        </label>
+        <label class="field"><span>Email</span>
+          <input type="email" name="email" required placeholder="you@example.com" autocomplete="email"/>
+        </label>
+        <button type="submit" class="btn btn-primary full-width">Look up order</button>
+      </form>
+      <div id="track-order-result" hidden style="margin-top:1.25rem"></div>
+    </div>
+  </main>
+  <div data-include="auth-modal"></div>
+  <script src="../js/toast.js"></script>
+  <script src="../js/session.js"></script>
+  <script src="../js/main.js"></script>
+  <script src="../js/track-order.js"></script>
+</body>
+</html>

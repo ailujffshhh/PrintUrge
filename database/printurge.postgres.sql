@@ -34,9 +34,12 @@ CREATE TABLE IF NOT EXISTS print_requests (
   transaction_id VARCHAR(40) NULL UNIQUE,
   user_id BIGINT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
   customer_name VARCHAR(160) NULL,
+  customer_email VARCHAR(255) NULL,
   customer_notes TEXT NULL,
   payment_method VARCHAR(80) NULL,
-  payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('paid', 'unpaid')),
+  payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'pending_review', 'paid')),
+  order_status VARCHAR(32) NOT NULL DEFAULT 'submitted',
+  receipt_stored_name VARCHAR(80) NULL,
   service VARCHAR(64) NOT NULL,
   color_mode VARCHAR(64) NULL,
   size_key VARCHAR(64) NULL,
@@ -65,6 +68,7 @@ CREATE TABLE IF NOT EXISTS print_request_files (
   mime VARCHAR(160) NULL,
   size_bytes BIGINT NOT NULL DEFAULT 0,
   content BYTEA NOT NULL,
+  file_kind VARCHAR(24) NOT NULL DEFAULT 'print',
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

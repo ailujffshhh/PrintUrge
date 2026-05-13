@@ -187,6 +187,12 @@ function ensure_database_schema(PDO $pdo): void
     ");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_request_files_request_id ON print_request_files(print_request_id)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_request_files_stored_name ON print_request_files(stored_name)");
+    $pdo->exec("ALTER TABLE print_request_files ADD COLUMN IF NOT EXISTS file_kind VARCHAR(24) NOT NULL DEFAULT 'print'");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255) NULL");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS receipt_stored_name VARCHAR(80) NULL");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS order_status VARCHAR(32) NOT NULL DEFAULT 'submitted'");
+    $pdo->exec('ALTER TABLE print_requests DROP CONSTRAINT IF EXISTS print_requests_payment_status_check');
+    $pdo->exec("ALTER TABLE print_requests ADD CONSTRAINT print_requests_payment_status_check CHECK (payment_status IN ('unpaid', 'pending_review', 'paid'))");
 
     if ($schemaTtl > 0) {
         printurge_cache_set('pgsql_schema_ready', 1, $schemaTtl);
@@ -375,6 +381,30 @@ function collect_uploaded_files(): array
     return $collected;
 }
 
+function printurge_normalize_payment_status_for_create(string $requested, bool $hasReceipt, string $paymentMethod, bool $publicForm): string
+{
+    $requested = strtolower(trim($requested));
+    if (!$publicForm) {
+        if (in_array($requested, ['unpaid', 'pending_review', 'paid'], true)) {
+            return $requested;
+        }
+        return 'unpaid';
+    }
+    if (!in_array($requested, ['unpaid', 'pending_review', 'paid'], true)) {
+        $requested = 'unpaid';
+    }
+    $isCash = strtolower(trim($paymentMethod)) === 'cash';
+    if ($requested === 'paid') {
+        return $hasReceipt && !$isCash ? 'pending_review' : 'unpaid';
+    }
+    if ($requested === 'pending_review') {
+        if ($isCash || !$hasReceipt) {
+            return 'unpaid';
+        }
+    }
+    return $requested;
+}
+
 function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): array
 {
     $files = collect_uploaded_files();
@@ -392,6 +422,19 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
         }
     }
 
+    $customerEmail = strtolower(trim((string)($_POST['customerEmail'] ?? $_POST['customer_email'] ?? '')));
+    if ($userId && ($customerEmail === '' || !filter_var($customerEmail, FILTER_VALIDATE_EMAIL))) {
+        $u = load_user_context($pdo, (int)$userId);
+        if ($u && !empty($u['email'])) {
+            $ce = strtolower(trim((string)$u['email']));
+            if (filter_var($ce, FILTER_VALIDATE_EMAIL)) {
+                $customerEmail = $ce;
+            }
+        }
+    }
+
+    $receiptFile = collect_payment_receipt_file();
+
     $metadata = array_map(function (array $file): array {
         return [
             'storedName' => $file['storedName'],
@@ -405,23 +448,41 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
     $customerName = trim((string)($_POST['customerName'] ?? $_POST['customer_name'] ?? ''));
     $customerNotes = trim((string)($_POST['customerNotes'] ?? $_POST['customer_notes'] ?? ''));
     $paymentMethod = trim((string)($_POST['paymentMethod'] ?? $_POST['payment_method'] ?? ''));
-    $paymentStatus = strtolower(trim((string)($_POST['paymentStatus'] ?? $_POST['payment_status'] ?? 'unpaid')));
-    if (!in_array($paymentStatus, ['paid', 'unpaid'], true)) {
-        $paymentStatus = 'unpaid';
+    if ($attachUploader && strtolower($paymentMethod) === 'bank_qr' && !$userId) {
+        json_response(['error' => 'Bank QR Transfer is available for signed-in accounts only'], 403);
     }
+    $requestedPayment = strtolower(trim((string)($_POST['paymentStatus'] ?? $_POST['payment_status'] ?? 'unpaid')));
+    $paymentStatus = printurge_normalize_payment_status_for_create(
+        $requestedPayment,
+        $receiptFile !== null,
+        $paymentMethod,
+        $attachUploader
+    );
+
+    if ($attachUploader && ($customerEmail === '' || !filter_var($customerEmail, FILTER_VALIDATE_EMAIL))) {
+        json_response(['error' => 'A valid customer email is required'], 400);
+    }
+    if ($attachUploader && $paymentStatus === 'pending_review' && $receiptFile === null) {
+        json_response(['error' => 'Payment receipt image is required for this payment option'], 400);
+    }
+
+    $customerEmailDb = $customerEmail !== '' ? substr($customerEmail, 0, 255) : null;
+
     $filesJson = json_encode($metadata, JSON_UNESCAPED_SLASHES);
     $driver = db_driver($pdo);
     $filesPlaceholder = $driver === 'pgsql' ? '?::jsonb' : '?';
     $sql = 'INSERT INTO print_requests
-        (transaction_id, user_id, customer_name, customer_notes, payment_method, payment_status, service, color_mode, size_key, copies, pages, custom_width, custom_height, files_json, admin_notes, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ' . $filesPlaceholder . ', NULL, ?)';
+        (transaction_id, user_id, customer_name, customer_email, customer_notes, payment_method, payment_status, order_status, service, color_mode, size_key, copies, pages, custom_width, custom_height, files_json, admin_notes, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ' . $filesPlaceholder . ', NULL, ?)';
     $params = [
         $transactionId,
         $userId,
         $customerName !== '' ? substr($customerName, 0, 160) : null,
+        $customerEmailDb,
         $customerNotes !== '' ? substr($customerNotes, 0, 2000) : null,
         $paymentMethod !== '' ? substr($paymentMethod, 0, 80) : null,
         $paymentStatus,
+        'submitted',
         $service,
         substr(trim((string)($_POST['colorMode'] ?? '')), 0, 64) ?: null,
         substr(trim((string)($_POST['size'] ?? '')), 0, 64) ?: null,
@@ -439,7 +500,11 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
             $stmt = $pdo->prepare($sql . ' RETURNING id');
             $stmt->execute($params);
             $id = (int)$stmt->fetchColumn();
-            save_file_rows($pdo, $id, $files);
+            save_file_rows($pdo, $id, $files, 'print');
+            if ($receiptFile !== null) {
+                save_file_rows($pdo, $id, [$receiptFile], 'payment_receipt');
+                $pdo->prepare('UPDATE print_requests SET receipt_stored_name = ? WHERE id = ?')->execute([$receiptFile['storedName'], $id]);
+            }
             $pdo->commit();
             printurge_admin_cache_bump();
             return ['id' => $id, 'transaction_id' => $transactionId, 'payment_status' => $paymentStatus];
@@ -454,7 +519,11 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $id = (int)$pdo->lastInsertId();
-        save_file_rows($pdo, $id, $files);
+        save_file_rows($pdo, $id, $files, 'print');
+        if ($receiptFile !== null) {
+            save_file_rows($pdo, $id, [$receiptFile], 'payment_receipt');
+            $pdo->prepare('UPDATE print_requests SET receipt_stored_name = ? WHERE id = ?')->execute([$receiptFile['storedName'], $id]);
+        }
         $pdo->commit();
         printurge_admin_cache_bump();
         return ['id' => $id, 'transaction_id' => $transactionId, 'payment_status' => $paymentStatus];
@@ -464,12 +533,13 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
     }
 }
 
-function save_file_rows(PDO $pdo, int $requestId, array $files): void
+function save_file_rows(PDO $pdo, int $requestId, array $files, string $fileKind = 'print'): void
 {
+    $kind = substr(preg_replace('/[^a-z_]/', '', strtolower($fileKind)) ?: 'print', 0, 24) ?: 'print';
     $stmt = $pdo->prepare(
         'INSERT INTO print_request_files
-          (print_request_id, stored_name, original_name, mime, size_bytes, content)
-         VALUES (?, ?, ?, ?, ?, ?)'
+          (print_request_id, stored_name, original_name, mime, size_bytes, content, file_kind)
+         VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
 
     foreach ($files as $file) {
@@ -479,8 +549,40 @@ function save_file_rows(PDO $pdo, int $requestId, array $files): void
         $stmt->bindValue(4, $file['mime']);
         $stmt->bindValue(5, (int)$file['size'], PDO::PARAM_INT);
         $stmt->bindValue(6, $file['content'], PDO::PARAM_LOB);
+        $stmt->bindValue(7, $kind);
         $stmt->execute();
     }
+}
+
+function collect_payment_receipt_file(): ?array
+{
+    $f = $_FILES['paymentReceipt'] ?? $_FILES['receipt'] ?? null;
+    if (!$f || empty($f['name']) || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        return null;
+    }
+    $size = (int)($f['size'] ?? 0);
+    if ($size > 8 * 1024 * 1024) {
+        json_response(['error' => 'Receipt image must be 8MB or smaller'], 400);
+    }
+    $mime = (string)($f['type'] ?? '');
+    if ($mime === '' || stripos($mime, 'image/') !== 0) {
+        json_response(['error' => 'Receipt must be an image file (JPG, PNG, etc.)'], 400);
+    }
+    $original = (string)$f['name'];
+    $content = file_get_contents((string)$f['tmp_name']);
+    if ($content === false) {
+        json_response(['error' => 'Could not read receipt upload'], 500);
+    }
+    $ext = pathinfo($original, PATHINFO_EXTENSION);
+    $ext = preg_replace('/[^a-zA-Z0-9]/', '', $ext ?? '');
+    $stored = bin2hex(random_bytes(18)) . ($ext ? ".{$ext}" : '.bin');
+    return [
+        'storedName' => $stored,
+        'originalName' => $original,
+        'mime' => $mime,
+        'size' => $size,
+        'content' => $content,
+    ];
 }
 
 function handle_exception(Throwable $e): void

@@ -35,6 +35,7 @@ const sharedPartials = {
         <a href="{{base}}index.html#services">Services</a>
         <a href="{{base}}index.html#how-it-works">How It Works</a>
         <a href="{{base}}index.html#faq">FAQ</a>
+        <a href="{{base}}pages/track-order.html">Track order</a>
       </nav>
       <div class="nav-actions">
         <button type="button" class="btn btn-outline" data-open-auth="login">Log in</button>
@@ -470,6 +471,18 @@ const initServiceFilter = () => {
 };
 
 /* ── Footer Year ─────────────────────────────────────────────────── */
+const initHeroScrollCue = () => {
+  const cue = document.querySelector(".hero-scroll-down");
+  if (!cue) return;
+
+  const syncCue = () => {
+    cue.classList.toggle("is-hidden", window.scrollY > 8);
+  };
+
+  syncCue();
+  window.addEventListener("scroll", syncCue, { passive: true });
+};
+
 const updateYear = () => {
   const el = document.getElementById("footer-year");
   if (el) el.textContent = String(new Date().getFullYear());
@@ -484,6 +497,7 @@ const runApp = async () => {
   initAuthModal();
   initGoogleAuth();
   initServiceFilter();
+  initHeroScrollCue();
   updateYear();
 };
 

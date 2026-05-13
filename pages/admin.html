@@ -55,6 +55,7 @@
                 <th>Service</th>
                 <th>Customer</th>
                 <th>Payment</th>
+                <th>Order</th>
                 <th>Status</th>
                 <th>Created</th>
               </tr>
@@ -68,8 +69,9 @@
           <p style="color:var(--muted); margin:0 0 1rem">Upload at least one file. Optional customer user ID links the row to a registered client.</p>
           <form class="quick-form" id="admin-create-form">
           <label class="field"><span>Customer user ID (optional)</span><input type="number" min="1" name="userId" placeholder="e.g. 12"/></label>
-            <label class="field"><span>Customer name</span><input type="text" name="customerName" placeholder="Walk-in customer"/></label>
-            <label class="field"><span>Payment method</span>
+          <label class="field"><span>Customer name</span><input type="text" name="customerName" placeholder="Walk-in customer"/></label>
+          <label class="field"><span>Customer email</span><input type="email" name="customerEmail" placeholder="For e-receipt / tracking"/></label>
+          <label class="field"><span>Payment method</span>
               <select name="paymentMethod">
                 <option value="">Not specified</option>
                 <option value="bank_qr">Bank QR</option>
@@ -80,6 +82,7 @@
             <label class="field"><span>Payment status</span>
               <select name="paymentStatus">
                 <option value="unpaid">Unpaid</option>
+                <option value="pending_review">Pending proof review</option>
                 <option value="paid">Paid</option>
               </select>
             </label>
@@ -128,8 +131,18 @@
           <input type="hidden" name="requestId"/>
           <label class="field"><span>Transaction ID</span><input type="text" name="transaction_id" readonly/></label>
           <label class="field"><span>Customer name</span><input type="text" name="customer_name"/></label>
+          <label class="field"><span>Customer email</span><input type="email" name="customer_email" placeholder="Guest checkout email"/></label>
           <label class="field"><span>Payment method</span><input type="text" name="payment_method"/></label>
           <label class="field"><span>Payment status</span><input type="text" name="payment_status" readonly/></label>
+          <label class="field"><span>Order status</span>
+            <select name="order_status">
+              <option value="submitted">Submitted</option>
+              <option value="processing">Processing</option>
+              <option value="ready">Ready for pickup</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </label>
           <label class="field"><span>Service</span><input type="text" name="service" required/></label>
           <label class="field"><span>Color / finish</span><input type="text" name="color_mode"/></label>
           <label class="field"><span>Size</span><input type="text" name="size_key"/></label>
@@ -142,7 +155,8 @@
           <div id="admin-detail-files"></div>
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap">
             <button type="submit" class="btn btn-primary">Save changes</button>
-            <button type="button" class="btn btn-outline" id="admin-detail-paid">Mark paid</button>
+            <button type="button" class="btn btn-outline" id="admin-detail-paid">Mark paid / approve</button>
+            <button type="button" class="btn btn-outline" id="admin-detail-reject-receipt">Reject payment proof</button>
             <button type="button" class="btn btn-outline" id="admin-detail-unpaid">Mark unpaid</button>
             <button type="button" class="btn btn-outline" id="admin-detail-archive">Archive</button>
             <button type="button" class="btn btn-outline" id="admin-detail-restore">Restore</button>

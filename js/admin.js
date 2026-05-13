@@ -19,6 +19,7 @@
   var btnArchive = document.getElementById("admin-detail-archive");
   var btnRestore = document.getElementById("admin-detail-restore");
   var btnPaid = document.getElementById("admin-detail-paid");
+  var btnRejectReceipt = document.getElementById("admin-detail-reject-receipt");
   var btnUnpaid = document.getElementById("admin-detail-unpaid");
 
   if (!gate || !app || !loginForm) return;
@@ -128,14 +129,14 @@
 
   async function loadList() {
     if (!isAdminSession() || !rowsEl) return;
-    rowsEl.innerHTML = '<tr><td colspan="7"><div class="admin-loading"><span></span>Loading print requests...</div></td></tr>';
+    rowsEl.innerHTML = '<tr><td colspan="8"><div class="admin-loading"><span></span>Loading print requests...</div></td></tr>';
 
     var qs = currentStatus === "all" ? "" : "?status=" + encodeURIComponent(currentStatus);
     var data = await api("/api/admin/print-requests" + qs);
     var items = data.items || [];
 
     if (!items.length) {
-      rowsEl.innerHTML = '<tr><td colspan="7">No print requests yet.</td></tr>';
+      rowsEl.innerHTML = '<tr><td colspan="8">No print requests yet.</td></tr>';
       return;
     }
 
@@ -147,10 +148,16 @@
           row.status === "archived"
             ? '<span class="admin-badge is-archived">Archived</span>'
             : '<span class="admin-badge is-active">Active</span>';
-        var payment =
-          row.payment_status === "paid"
-            ? '<span class="payment-badge is-paid">Paid</span>'
-            : '<button type="button" class="payment-badge is-unpaid" data-pay-row="' + row.id + '">Unpaid</button>';
+        var payment;
+        if (row.payment_status === "paid") {
+          payment = '<span class="payment-badge is-paid">Paid</span>';
+        } else if (row.payment_status === "pending_review") {
+          payment = '<span class="payment-badge is-pending">Proof</span>';
+        } else {
+          payment =
+            '<button type="button" class="payment-badge is-unpaid" data-pay-row="' + row.id + '">Unpaid</button>';
+        }
+        var orderSt = row.order_status || "submitted";
 
         return (
           '<tr data-id="' + row.id + '">' +
@@ -159,6 +166,7 @@
           "<td>" + escapeHtml(row.service) + "</td>" +
           "<td>" + escapeHtml(cust) + "</td>" +
           "<td>" + payment + "</td>" +
+          "<td>" + escapeHtml(orderSt) + "</td>" +
           "<td>" + statusBadge + "</td>" +
           "<td>" + escapeHtml(fmtDate(row.created_at)) + "</td>" +
           "</tr>"
@@ -181,8 +189,14 @@
     detailForm.elements.namedItem("requestId").value = String(item.id);
     detailForm.transaction_id.value = item.transaction_id || "";
     detailForm.customer_name.value = item.customer_name || item.user_name || "";
+    if (detailForm.elements.namedItem("customer_email")) {
+      detailForm.elements.namedItem("customer_email").value = item.customer_email || item.user_email || "";
+    }
     detailForm.payment_method.value = item.payment_method || "";
     detailForm.payment_status.value = item.payment_status || "unpaid";
+    if (detailForm.elements.namedItem("order_status")) {
+      detailForm.elements.namedItem("order_status").value = item.order_status || "submitted";
+    }
     detailForm.service.value = item.service || "";
     detailForm.color_mode.value = item.color_mode || "";
     detailForm.size_key.value = item.size_key || "";
@@ -198,9 +212,14 @@
       '<p style="font-weight:700;margin:0 0 .35rem">Files</p>' +
       files
         .map(function (f) {
+          var tag =
+            f.kind === "payment_receipt"
+              ? ' <span class="admin-badge is-pending" style="margin-left:.35rem">Receipt</span>'
+              : "";
           return (
             '<div class="admin-file-row"><span>' +
             escapeHtml(f.originalName || f.storedName) +
+            tag +
             '</span><div class="admin-file-actions">' +
             '<button type="button" class="btn btn-outline" data-dl="' +
             escapeHtml(f.storedName) +
@@ -214,8 +233,15 @@
 
     btnArchive.hidden = item.status !== "active";
     btnRestore.hidden = item.status !== "archived";
-    if (btnPaid) btnPaid.hidden = item.payment_status === "paid";
-    if (btnUnpaid) btnUnpaid.hidden = item.payment_status !== "paid";
+    if (btnPaid) {
+      btnPaid.hidden = item.payment_status === "paid";
+      btnPaid.textContent =
+        item.payment_status === "pending_review" ? "Approve payment (e-receipt)" : "Mark paid / approve";
+    }
+    if (btnRejectReceipt) {
+      btnRejectReceipt.hidden = item.payment_status !== "pending_review";
+    }
+    if (btnUnpaid) btnUnpaid.hidden = item.payment_status === "unpaid";
 
     openDetail();
   }
@@ -273,13 +299,27 @@
       await api("/api/admin/print-requests/" + encodeURIComponent(id) + "/" + (paid ? "mark-paid" : "mark-unpaid"), {
         method: "POST",
       });
-      notify(paid ? "Marked as paid." : "Marked as unpaid.", "success");
+      notify(paid ? "Marked as paid. E-receipt sent if email is on file." : "Marked as unpaid.", "success");
       await loadList();
       if (selectedId === id) await openRow(id);
     } catch (err) {
       notify(err.message || "Payment update failed", "error");
     } finally {
       setButtonLoading(sourceBtn || (paid ? btnPaid : btnUnpaid), false);
+    }
+  }
+
+  async function rejectPaymentProof(id, sourceBtn) {
+    try {
+      setButtonLoading(sourceBtn, true, "Rejecting...");
+      await api("/api/admin/print-requests/" + encodeURIComponent(id) + "/reject-receipt", { method: "POST" });
+      notify("Payment proof rejected.", "success");
+      await loadList();
+      if (selectedId === id) await openRow(id);
+    } catch (err) {
+      notify(err.message || "Reject failed", "error");
+    } finally {
+      setButtonLoading(sourceBtn, false);
     }
   }
 
@@ -380,9 +420,15 @@
       custom_width: detailForm.custom_width.value.trim() || null,
       custom_height: detailForm.custom_height.value.trim() || null,
       customer_name: detailForm.customer_name.value.trim() || null,
+      customer_email: detailForm.elements.namedItem("customer_email")
+        ? detailForm.elements.namedItem("customer_email").value.trim().toLowerCase() || null
+        : null,
       customer_notes: detailForm.customer_notes.value,
       payment_method: detailForm.payment_method.value.trim() || null,
       admin_notes: detailForm.admin_notes.value,
+      order_status: detailForm.elements.namedItem("order_status")
+        ? detailForm.elements.namedItem("order_status").value
+        : undefined,
     };
     try {
       setButtonLoading(submit, true, "Saving...");
@@ -404,6 +450,12 @@
   if (btnPaid) {
     btnPaid.addEventListener("click", function () {
       markPayment(Number(detailForm.elements.namedItem("requestId").value), true, btnPaid);
+    });
+  }
+
+  if (btnRejectReceipt) {
+    btnRejectReceipt.addEventListener("click", function () {
+      rejectPaymentProof(Number(detailForm.elements.namedItem("requestId").value), btnRejectReceipt);
     });
   }
 
@@ -471,6 +523,8 @@
     if (createForm.customHeight.value) fd.append("customHeight", createForm.customHeight.value);
     if (createForm.userId.value.trim()) fd.append("userId", createForm.userId.value.trim());
     if (createForm.customerName.value.trim()) fd.append("customerName", createForm.customerName.value.trim());
+    var ce = createForm.querySelector('[name="customerEmail"]');
+    if (ce && ce.value.trim()) fd.append("customerEmail", ce.value.trim().toLowerCase());
     if (createForm.customerNotes.value.trim()) fd.append("customerNotes", createForm.customerNotes.value.trim());
     if (createForm.paymentMethod.value) fd.append("paymentMethod", createForm.paymentMethod.value);
     fd.append("paymentStatus", createForm.paymentStatus.value || "unpaid");

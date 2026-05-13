@@ -12,6 +12,10 @@
     "api/admin/*.php": {
       "runtime": "vercel-php@0.9.0",
       "maxDuration": 60
+    },
+    "api/track-order.php": {
+      "runtime": "vercel-php@0.9.0",
+      "maxDuration": 30
     }
   },
   "rewrites": [
@@ -32,6 +36,10 @@
       "destination": "/api/print-requests.php"
     },
     {
+      "source": "/api/track-order",
+      "destination": "/api/track-order.php"
+    },
+    {
       "source": "/api/admin/print-requests",
       "destination": "/api/admin/print-requests.php"
     },
@@ -50,6 +58,10 @@
     {
       "source": "/admin",
       "destination": "/pages/admin.html"
+    },
+    {
+      "source": "/track-order",
+      "destination": "/pages/track-order.html"
     }
   ]
 }

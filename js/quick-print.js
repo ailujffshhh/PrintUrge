@@ -454,10 +454,72 @@
     return !!(s && s.user);
   }
 
+  function getSessionUser() {
+    var s = window.PrintUrgeSession && window.PrintUrgeSession.get && window.PrintUrgeSession.get();
+    return s && s.user ? s.user : null;
+  }
+
   function getQrSrc() {
     if (window.PRINTURGE_QR_SRC) return window.PRINTURGE_QR_SRC;
     var basePath = typeof window.PrintUrgeApiPath === "function" ? window.PrintUrgeApiPath("/") : "/";
     return basePath.replace(/\/$/, "") + "/asssets/payment-qr.png";
+  }
+
+  function isValidEmail(s) {
+    s = String(s || "").trim();
+    if (!s) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+  }
+
+  function ensureBankQrWindowModal() {
+    var modal = document.getElementById("printurge-bank-qr-window");
+    if (modal) return modal;
+    modal = document.createElement("div");
+    modal.className = "modal payment-modal payment-bank-layer";
+    modal.id = "printurge-bank-qr-window";
+    modal.setAttribute("aria-hidden", "true");
+    modal.innerHTML =
+      '<div class="modal-overlay" data-bank-win-close></div>' +
+      '<div class="modal-content auth-modal" role="dialog" aria-modal="true" aria-labelledby="bank-win-title">' +
+      '<div class="modal-header auth-header">' +
+      '<div class="auth-heading">' +
+      '<h2 class="auth-title" id="bank-win-title">Bank transfer</h2>' +
+      '<p class="auth-subtitle">Scan the QR code with your banking app, then continue to upload your receipt.</p>' +
+      '</div><button type="button" class="modal-close" data-bank-win-close aria-label="Close">Close</button></div>' +
+      '<div class="payment-qr-wrap">' +
+      '<p class="payment-qr-label" style="margin:0 0 .5rem;font-weight:600;text-align:center">Bank QR image</p>' +
+      '<img src="' + getQrSrc() + '" alt="Banking QR code" onerror="this.style.display=\'none\'; var n=this.nextElementSibling; if(n) n.hidden=false;">' +
+      '<p hidden class="payment-qr-fallback">Add your banking QR image at <strong>asssets/payment-qr.png</strong>.</p></div>' +
+      '<p class="auth-hint">Complete the transfer, then choose <strong>Continue to receipt</strong>. Staff will confirm your payment before printing.</p>' +
+      '<div class="payment-actions" style="margin-top:.5rem">' +
+      '<button type="button" class="btn btn-outline" data-bank-win-back>Back</button>' +
+      '<button type="button" class="btn btn-primary" data-bank-win-continue>Continue to receipt</button></div></div>';
+    document.body.appendChild(modal);
+    modal.querySelectorAll("[data-bank-win-close]").forEach(function (el) {
+      el.addEventListener("click", closeBankQrWindowModal);
+    });
+    modal.querySelector("[data-bank-win-back]").addEventListener("click", function () {
+      closeBankQrWindowModal();
+      showPaymentStep("details");
+    });
+    modal.querySelector("[data-bank-win-continue]").addEventListener("click", function () {
+      closeBankQrWindowModal();
+      showPaymentStep("receipt");
+    });
+    return modal;
+  }
+
+  function openBankQrWindowModal() {
+    var modal = ensureBankQrWindowModal();
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeBankQrWindowModal() {
+    var modal = document.getElementById("printurge-bank-qr-window");
+    if (!modal) return;
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
   }
 
   function ensurePaymentModal() {
@@ -470,57 +532,162 @@
     modal.innerHTML =
       '<div class="modal-overlay" data-payment-close></div>' +
       '<div class="modal-content auth-modal" role="dialog" aria-modal="true" aria-labelledby="payment-title">' +
-        '<div class="modal-header auth-header"><div class="auth-heading">' +
-          '<h2 class="auth-title" id="payment-title">Customer details</h2>' +
-          '<p class="auth-subtitle" id="payment-subtitle">Add your details before sending.</p>' +
-        '</div><button type="button" class="modal-close" data-payment-close aria-label="Close">Close</button></div>' +
-        '<form class="auth-form payment-step is-active" id="payment-details-step">' +
-          '<label class="field"><span>Name</span><input type="text" name="customerName" required></label>' +
-          '<label class="field"><span>Notes</span><textarea name="customerNotes" rows="3" placeholder="Paper instructions, pickup notes, or contact details"></textarea></label>' +
-          '<label class="field"><span>Payment method</span><select name="paymentMethod" required><option value="bank_qr">Bank QR</option><option value="cash">Cash on pickup</option><option value="other">Other manual payment</option></select></label>' +
-          '<button type="submit" class="btn btn-primary full-width">Continue to payment</button>' +
-        '</form>' +
-        '<div class="payment-step" id="payment-qr-step">' +
-          '<div class="payment-qr-wrap"><img src="' + getQrSrc() + '" alt="Banking QR code" onerror="this.style.display=\'none\'; this.nextElementSibling.hidden=false;"><p hidden class="payment-qr-fallback">Add your banking QR image at <strong>asssets/payment-qr.png</strong>.</p></div>' +
-          '<p class="auth-hint">Complete the bank transfer manually, then click Paid to send the print request.</p>' +
-          '<div class="payment-actions"><button type="button" class="btn btn-outline" data-payment-back>Back</button><button type="button" class="btn btn-primary" data-payment-paid>Paid</button></div>' +
-        '</div>' +
+      '<div class="modal-header auth-header"><div class="auth-heading">' +
+      '<h2 class="auth-title" id="payment-title">Checkout details</h2>' +
+      '<p class="auth-subtitle" id="payment-subtitle">We need your contact information before submitting your print job.</p>' +
+      '</div><button type="button" class="modal-close" data-payment-close aria-label="Close">Close</button></div>' +
+      '<div class="payment-step is-active" id="payment-details-step">' +
+      '<label class="field"><span>Name</span><input type="text" name="customerName" required autocomplete="name"></label>' +
+      '<label class="field"><span>Email</span><input type="email" name="customerEmail" required autocomplete="email" placeholder="For e-receipt and order tracking"></label>' +
+      '<label class="field"><span>Notes</span><textarea name="customerNotes" rows="3" placeholder="Paper instructions, pickup notes, or contact details"></textarea></label>' +
+      '<label class="field"><span>Payment method</span><select name="paymentMethod" required><option value="cash" selected>Cash on pickup</option><option value="bank_qr" data-account-only>Bank QR Transfer</option></select></label>' +
+      '<button type="button" class="btn btn-primary full-width" id="payment-details-continue">Continue</button>' +
+      '</div>' +
+      '<div class="payment-step" id="payment-cash-confirm-step">' +
+      '<p class="auth-hint" id="payment-cash-lead">You chose <strong>cash on pickup</strong>. No bank payment or receipt upload is needed.</p>' +
+      '<p class="auth-hint" id="payment-cash-summary" style="margin-top:0"></p>' +
+      '<div class="payment-actions">' +
+      '<button type="button" class="btn btn-outline" data-cash-confirm-back>Back</button>' +
+      '<button type="button" class="btn btn-primary" id="payment-cash-confirm-submit">Confirm order</button>' +
+      '</div></div>' +
+      '<div class="payment-step" id="payment-receipt-step">' +
+      '<p class="auth-hint" id="payment-receipt-hint">Upload a clear photo or screenshot of your bank transfer receipt. Staff will verify it before confirming payment.</p>' +
+      '<label class="field"><span>Receipt image</span><input type="file" id="payment-receipt-input" accept="image/*"></label>' +
+      '<div class="payment-actions">' +
+      '<button type="button" class="btn btn-outline" data-receipt-back>Back</button>' +
+      '<button type="button" class="btn btn-primary" id="payment-paid-submit">I have paid — submit proof</button>' +
+      '</div></div>' +
       '</div>';
     document.body.appendChild(modal);
     modal.querySelectorAll("[data-payment-close]").forEach(function (el) {
       el.addEventListener("click", closePaymentModal);
     });
-    modal.querySelector("[data-payment-back]").addEventListener("click", function () {
-      showPaymentStep("details");
-    });
-    modal.querySelector("#payment-details-step").addEventListener("submit", function (e) {
-      e.preventDefault();
-      showPaymentStep("qr");
-    });
-    modal.querySelector("[data-payment-paid]").addEventListener("click", function () {
+    modal.querySelector("#payment-details-continue").addEventListener("click", function () {
       var details = readPaymentDetails();
       if (!details.customerName) {
-        showPaymentStep("details");
         notify("Please enter your name.", "error");
         return;
       }
-      details.paymentStatus = "paid";
-      if (pendingSubmit) sendPrintRequest(pendingSubmit, details);
+      if (!isValidEmail(details.customerEmail)) {
+        notify("Please enter a valid email for your receipt and order tracking.", "error");
+        return;
+      }
+      var pm = details.paymentMethod;
+      if (pm === "bank_qr" && !isSignedIn()) {
+        notify("Bank QR Transfer is available for signed-in accounts only.", "error");
+        syncPaymentMethodLock();
+        return;
+      }
+      if (pm === "cash") {
+        updateCashConfirmSummary();
+        showPaymentStep("cashConfirm");
+        return;
+      }
+      openBankQrWindowModal();
+    });
+    modal.querySelector("[data-cash-confirm-back]").addEventListener("click", function () {
+      showPaymentStep("details");
+    });
+    modal.querySelector("#payment-cash-confirm-submit").addEventListener("click", function () {
+      var details = readPaymentDetails();
+      if (!details.customerName || !isValidEmail(details.customerEmail)) {
+        showPaymentStep("details");
+        notify("Please complete your name and email.", "error");
+        return;
+      }
+      details.paymentStatus = "unpaid";
+      details.paymentMethod = "cash";
+      if (pendingSubmit) sendPrintRequest(pendingSubmit, details, null);
+    });
+    modal.querySelector("[data-receipt-back]").addEventListener("click", function () {
+      openBankQrWindowModal();
+    });
+    modal.querySelector("#payment-paid-submit").addEventListener("click", function () {
+      var details = readPaymentDetails();
+      var inp = modal.querySelector("#payment-receipt-input");
+      var f = inp && inp.files && inp.files[0];
+      if (!f) {
+        notify("Please attach a receipt image.", "error");
+        return;
+      }
+      if (!details.customerName || !isValidEmail(details.customerEmail)) {
+        showPaymentStep("details");
+        notify("Please complete your name and email.", "error");
+        return;
+      }
+      details.paymentStatus = "pending_review";
+      if (pendingSubmit) sendPrintRequest(pendingSubmit, details, f);
     });
     return modal;
   }
 
+  function syncPaymentMethodLock() {
+    var modal = ensurePaymentModal();
+    var select = modal.querySelector('[name="paymentMethod"]');
+    var bankOption = modal.querySelector('[name="paymentMethod"] option[value="bank_qr"]');
+    if (!select || !bankOption) return;
+
+    var locked = !isSignedIn();
+    bankOption.disabled = locked;
+    bankOption.textContent = locked
+      ? "Bank QR Transfer (accounts only)"
+      : "Bank QR Transfer";
+    if (locked && select.value === "bank_qr") {
+      select.value = "cash";
+    }
+  }
+
+  function prefillCheckoutIdentity() {
+    var user = getSessionUser();
+    if (!user) return;
+    var modal = ensurePaymentModal();
+    var name = modal.querySelector('[name="customerName"]');
+    var email = modal.querySelector('[name="customerEmail"]');
+    if (name && !name.value.trim()) name.value = user.name || "";
+    if (email && !email.value.trim()) email.value = user.email || "";
+  }
+
+  function updateCashConfirmSummary() {
+    var modal = ensurePaymentModal();
+    var d = readPaymentDetails();
+    var sum = modal.querySelector("#payment-cash-summary");
+    if (sum) {
+      sum.textContent = d.customerName + " · " + d.customerEmail;
+    }
+  }
+
   function showPaymentStep(step) {
     var modal = ensurePaymentModal();
-    modal.querySelector("#payment-details-step").classList.toggle("is-active", step === "details");
-    modal.querySelector("#payment-qr-step").classList.toggle("is-active", step === "qr");
-    modal.querySelector("#payment-title").textContent = step === "qr" ? "Manual payment" : "Customer details";
-    modal.querySelector("#payment-subtitle").textContent = step === "qr" ? "Scan the QR code with your banking app." : "Add your details before sending.";
+    var dStep = modal.querySelector("#payment-details-step");
+    var cStep = modal.querySelector("#payment-cash-confirm-step");
+    var rStep = modal.querySelector("#payment-receipt-step");
+    if (dStep) dStep.classList.toggle("is-active", step === "details");
+    if (cStep) cStep.classList.toggle("is-active", step === "cashConfirm");
+    if (rStep) rStep.classList.toggle("is-active", step === "receipt");
+    var t = modal.querySelector("#payment-title");
+    var s = modal.querySelector("#payment-subtitle");
+    if (step === "receipt") {
+      t.textContent = "Payment proof";
+      s.textContent = "Upload your transfer receipt so staff can verify your payment.";
+    } else if (step === "cashConfirm") {
+      t.textContent = "Confirm your order";
+      s.textContent = "Review and submit. Pay cash when you pick up your prints.";
+    } else {
+      t.textContent = "Checkout details";
+      s.textContent = "We need your contact information before submitting your print job.";
+    }
+    var rin = modal.querySelector("#payment-receipt-input");
+    if (rin) rin.value = "";
   }
 
   function openPaymentModal(formData) {
     pendingSubmit = formData;
     var modal = ensurePaymentModal();
+    var paymentMethod = modal.querySelector('[name="paymentMethod"]');
+    if (paymentMethod) paymentMethod.value = "cash";
+    closeBankQrWindowModal();
+    syncPaymentMethodLock();
+    prefillCheckoutIdentity();
     showPaymentStep("details");
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
@@ -528,6 +695,7 @@
   }
 
   function closePaymentModal() {
+    closeBankQrWindowModal();
     var modal = document.getElementById("guest-payment-modal");
     if (!modal) return;
     modal.classList.remove("is-open");
@@ -540,18 +708,23 @@
     var modal = ensurePaymentModal();
     return {
       customerName: modal.querySelector('[name="customerName"]').value.trim(),
+      customerEmail: modal.querySelector('[name="customerEmail"]').value.trim(),
       customerNotes: modal.querySelector('[name="customerNotes"]').value.trim(),
       paymentMethod: modal.querySelector('[name="paymentMethod"]').value,
       paymentStatus: "unpaid",
     };
   }
 
-  async function sendPrintRequest(formData, paymentDetails) {
+  async function sendPrintRequest(formData, paymentDetails, receiptFile) {
     if (paymentDetails) {
       formData.set("customerName", paymentDetails.customerName || "");
+      formData.set("customerEmail", paymentDetails.customerEmail || "");
       formData.set("customerNotes", paymentDetails.customerNotes || "");
       formData.set("paymentMethod", paymentDetails.paymentMethod || "");
       formData.set("paymentStatus", paymentDetails.paymentStatus || "unpaid");
+    }
+    if (receiptFile) {
+      formData.set("paymentReceipt", receiptFile);
     }
     try {
       setButtonLoading(submitBtn, true, "Sending...");
@@ -564,7 +737,9 @@
       var res = await fetch(apiPath("/api/print-requests"), { method: "POST", headers: headers, body: formData });
       var data = await res.json().catch(function () { return {}; });
       if (!res.ok) throw new Error(data.detail ? (data.error || "Upload failed") + ": " + data.detail : data.error || "Upload failed");
-      notify("Print request submitted. Transaction " + (data.transaction_id || "created") + ".", "success");
+      var ps = data.payment_status || "";
+      var extra = ps === "pending_review" ? " Payment proof received; staff will confirm shortly." : "";
+      notify("Print request submitted. Transaction " + (data.transaction_id || "created") + "." + extra, "success");
       closePaymentModal();
       closePreview(true);
     } catch (err) {
@@ -606,13 +781,7 @@
       formData.append("customHeight", customHeight.value);
     }
 
-    if (!isSignedIn()) {
-      openPaymentModal(formData);
-      return;
-    }
-
-    formData.append("paymentStatus", "unpaid");
-    await sendPrintRequest(formData, null);
+    openPaymentModal(formData);
   });
 
 })();

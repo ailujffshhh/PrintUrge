@@ -488,6 +488,11 @@ ul {
 }
 
 /* ── Hero ────────────────────────────────────────────────────────── */
+.section.hero {
+    position: relative;
+    padding-bottom: 6.25rem;
+}
+
 .hero {
     padding-top: 3.3rem
 }
@@ -525,6 +530,199 @@ ul {
 .hero-panel {
     position: relative;
     align-self: start
+}
+
+.hero-scroll-down {
+    position: fixed;
+    left: 50%;
+    bottom: max(0.65rem, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 999px;
+    text-decoration: none;
+    color: #1a4ec7;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(238, 246, 255, 0.9));
+    border: 1px solid rgba(26, 78, 199, 0.22);
+    box-shadow:
+        0 8px 22px rgba(15, 27, 61, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    cursor: pointer;
+    z-index: 2;
+    transition:
+        color 0.2s ease,
+        opacity 0.25s ease,
+        transform 0.25s ease,
+        visibility 0.25s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+    animation: hero-scroll-bounce 1.8s ease-in-out infinite;
+}
+
+.hero-scroll-down:hover {
+    color: var(--brand-cyan);
+    border-color: rgba(1, 199, 221, 0.65);
+    box-shadow:
+        0 12px 28px rgba(25, 77, 199, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.hero-scroll-down:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(1, 199, 221, 0.45), 0 12px 28px rgba(25, 77, 199, 0.2);
+}
+
+.hero-scroll-down.is-hidden {
+    animation: none;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translate(-50%, 0.75rem);
+}
+
+.hero-scroll-down-chevron {
+    display: block;
+}
+
+@keyframes hero-scroll-bounce {
+    0%,
+    100% {
+        transform: translateX(-50%) translateY(0);
+    }
+    50% {
+        transform: translateX(-50%) translateY(0.35rem);
+    }
+}
+
+/* ── Track order (hero → services) ─────────────────────────────── */
+.track-order-strip {
+    padding: 0.5rem 0 2.25rem;
+    margin-top: -0.5rem;
+}
+
+.track-order-hero-btn {
+    display: flex;
+    align-items: center;
+    gap: clamp(1rem, 3vw, 1.75rem);
+    width: 100%;
+    max-width: 920px;
+    margin: 0 auto;
+    padding: clamp(1.15rem, 2.8vw, 1.65rem) clamp(1.25rem, 3vw, 2rem);
+    border-radius: 22px;
+    text-decoration: none;
+    color: #f3f8ff;
+    background: linear-gradient(115deg, #153a9e 0%, #1a4ec7 38%, #2a76ff 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 4px 0 rgba(10, 30, 80, 0.35),
+        0 18px 40px rgba(25, 77, 199, 0.38),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.track-order-hero-btn:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.04);
+    box-shadow:
+        0 6px 0 rgba(10, 30, 80, 0.28),
+        0 26px 50px rgba(25, 77, 199, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.track-order-hero-btn:focus-visible {
+    outline: 3px solid var(--brand-cyan);
+    outline-offset: 4px;
+}
+
+.track-order-hero-icon {
+    flex-shrink: 0;
+    width: clamp(3.25rem, 8vw, 4.25rem);
+    height: clamp(3.25rem, 8vw, 4.25rem);
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #dff6ff;
+}
+
+.track-order-hero-icon svg {
+    width: 55%;
+    height: 55%;
+}
+
+.track-order-hero-copy {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 0.25rem;
+    text-align: left;
+}
+
+.track-order-hero-kicker {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.88;
+}
+
+.track-order-hero-title {
+    font-family: var(--font-heading, "Sora", system-ui, sans-serif);
+    font-size: clamp(1.35rem, 2.8vw, 1.85rem);
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+.track-order-hero-sub {
+    font-size: clamp(0.85rem, 1.6vw, 0.95rem);
+    line-height: 1.45;
+    color: rgba(230, 242, 255, 0.92);
+    max-width: 46ch;
+}
+
+.track-order-hero-cta {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.65rem 1.1rem;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 0.92rem;
+    color: #0e2f7b;
+    background: linear-gradient(125deg, var(--brand-cyan), #8af0ff);
+    box-shadow: 0 4px 14px rgba(1, 199, 221, 0.45);
+}
+
+.track-order-hero-btn:hover .track-order-hero-cta {
+    background: linear-gradient(125deg, #33dff0, #b8f7ff);
+}
+
+@media (max-width: 640px) {
+    .track-order-hero-btn {
+        flex-direction: column;
+        text-align: center;
+        align-items: stretch;
+    }
+
+    .track-order-hero-copy {
+        text-align: center;
+    }
+
+    .track-order-hero-sub {
+        max-width: none;
+    }
+
+    .track-order-hero-icon {
+        margin: 0 auto;
+    }
+
+    .track-order-hero-cta {
+        justify-content: center;
+    }
 }
 
 .upload-card {
@@ -1395,4 +1593,60 @@ ul {
     .preview-box {
         width: 95%
     }
+}
+
+/* ── Guest checkout (quick-print.js) — index.html only loads index.css ── */
+#guest-payment-modal .modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+#guest-payment-modal .payment-step:not(.is-active) {
+    display: none !important;
+}
+
+#guest-payment-modal .payment-step.is-active {
+    display: grid !important;
+    gap: 0.75rem;
+}
+
+.payment-qr-wrap {
+    display: grid;
+    place-items: center;
+    min-height: 240px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 14px;
+    background: #f8fbff;
+    padding: 1rem;
+}
+
+.payment-qr-wrap img {
+    width: min(260px, 80vw);
+    aspect-ratio: 1;
+    object-fit: contain;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid var(--line);
+}
+
+.payment-qr-fallback {
+    text-align: center;
+    color: var(--muted);
+}
+
+.payment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.55rem;
+}
+
+.payment-bank-layer.modal {
+    z-index: 240;
+}
+
+.payment-qr-label {
+    color: var(--muted);
+    font-size: 0.9rem;
 }
