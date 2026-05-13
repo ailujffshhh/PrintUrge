@@ -5,6 +5,22 @@ require_once __DIR__ . '/../database/db.php';
 
 const PRINTURGE_DEFAULT_JWT_SECRET = 'dev-only-change-me';
 
+function allow_methods(array $methods): void
+{
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+    header('Access-Control-Allow-Methods: ' . implode(', ', array_merge($methods, ['OPTIONS'])));
+
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+        http_response_code(204);
+        exit;
+    }
+
+    if (!in_array(($_SERVER['REQUEST_METHOD'] ?? 'GET'), $methods, true)) {
+        json_response(['error' => 'Method not allowed'], 405);
+    }
+}
+
 function json_response(array $payload, int $status = 200): void
 {
     http_response_code($status);

@@ -16,6 +16,38 @@
   },
   "rewrites": [
     {
+      "source": "/api/auth/login",
+      "destination": "/api/auth/login.php"
+    },
+    {
+      "source": "/api/auth/register",
+      "destination": "/api/auth/register.php"
+    },
+    {
+      "source": "/api/auth/me",
+      "destination": "/api/auth/me.php"
+    },
+    {
+      "source": "/api/print-requests",
+      "destination": "/api/print-requests.php"
+    },
+    {
+      "source": "/api/admin/print-requests",
+      "destination": "/api/admin/print-requests.php"
+    },
+    {
+      "source": "/api/admin/print-requests/:id",
+      "destination": "/api/admin/print-requests.php?id=:id"
+    },
+    {
+      "source": "/api/admin/print-requests/:id/:action",
+      "destination": "/api/admin/print-requests.php?id=:id&action=:action"
+    },
+    {
+      "source": "/api/admin/files/:storedName",
+      "destination": "/api/admin/file.php?storedName=:storedName"
+    },
+    {
       "source": "/admin",
       "destination": "/pages/admin.html"
     }
