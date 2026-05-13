@@ -10,7 +10,7 @@
     </div>
 
     <div class="modal-panel is-active" id="login-panel" role="tabpanel" aria-labelledby="auth-title">
-      <form class="auth-form" id="login-form">
+      <form class="auth-form" id="login-form" action="/api/auth/login" method="post">
         <label class="field">
           <span>Email</span>
           <input type="email" name="login-email" autocomplete="email" required/>
@@ -41,7 +41,7 @@
     </div>
 
     <div class="modal-panel" id="signup-panel" role="tabpanel" aria-labelledby="auth-title">
-      <form class="auth-form" id="signup-form">
+      <form class="auth-form" id="signup-form" action="/api/auth/register" method="post">
         <label class="field">
           <span>Name</span>
           <input type="text" name="signup-name" autocomplete="name" required/>

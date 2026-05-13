@@ -57,7 +57,7 @@ const sharedPartials = {
       <button type="button" class="modal-close" data-modal-close aria-label="Close dialog">Close</button>
     </div>
     <div class="modal-panel is-active" id="login-panel" role="tabpanel">
-      <form class="auth-form" id="login-form">
+      <form class="auth-form" id="login-form" action="/api/auth/login" method="post">
         <label class="field"><span>Email</span><input type="email" name="login-email" autocomplete="email" required/></label>
         <label class="field"><span>Password</span><input type="password" name="login-password" autocomplete="current-password" required/></label>
         <div class="auth-divider"><span>or</span></div>
@@ -77,7 +77,7 @@ const sharedPartials = {
       </form>
     </div>
     <div class="modal-panel" id="signup-panel" role="tabpanel">
-      <form class="auth-form" id="signup-form">
+      <form class="auth-form" id="signup-form" action="/api/auth/register" method="post">
         <label class="field"><span>Name</span><input type="text" name="signup-name" autocomplete="name" required/></label>
         <label class="field"><span>Email</span><input type="email" name="signup-email" autocomplete="email" required/></label>
         <label class="field"><span>Password</span><input type="password" name="signup-password" autocomplete="new-password" required/></label>

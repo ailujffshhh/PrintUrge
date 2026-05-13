@@ -26,7 +26,7 @@
       <section id="admin-gate" class="card admin-gate">
         <h2 class="auth-title" style="margin-bottom:0.5rem">Admin sign in</h2>
         <p class="section-intro" style="margin-bottom:1rem">Use an account with the admin role.</p>
-        <form class="auth-form" id="admin-login-form">
+        <form class="auth-form" id="admin-login-form" action="/api/auth/login" method="post">
           <label class="field"><span>Email</span><input type="email" name="email" autocomplete="username" required/></label>
           <label class="field"><span>Password</span><input type="password" name="password" autocomplete="current-password" required/></label>
           <button type="submit" class="btn btn-primary full-width">Sign in</button>

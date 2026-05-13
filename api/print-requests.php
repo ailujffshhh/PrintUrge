@@ -3,6 +3,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    json_response([
+        'ok' => true,
+        'endpoint' => 'print-requests',
+        'message' => 'Submit the print request form to create a request.',
+        'method' => 'POST',
+    ]);
+}
+
 allow_methods(['POST']);
 
 try {

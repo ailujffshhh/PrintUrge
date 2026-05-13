@@ -3,13 +3,25 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../common.php';
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    json_response([
+        'ok' => true,
+        'endpoint' => 'login',
+        'message' => 'Submit the login form to sign in.',
+        'method' => 'POST',
+    ]);
+}
+
 allow_methods(['POST']);
 
 try {
     $pdo = printurge_db();
     $body = read_json_body();
-    $email = strtolower(trim((string)($body['email'] ?? '')));
-    $password = (string)($body['password'] ?? '');
+    if (!$body && $_POST) {
+        $body = $_POST;
+    }
+    $email = strtolower(trim((string)($body['email'] ?? $body['login-email'] ?? '')));
+    $password = (string)($body['password'] ?? $body['login-password'] ?? '');
 
     if ($email === '' || $password === '') {
         json_response(['error' => 'Email and password are required'], 400);
