@@ -14,7 +14,11 @@ const getBasePath = () => {
   return "";
 };
 
-window.PrintUrgeApiPath = (path) => `${getBasePath()}${String(path).replace(/^\/+/, "")}`;
+window.PrintUrgeApiPath = (path) => {
+  const clean = String(path);
+  if (clean.startsWith("/")) return clean;
+  return `${getBasePath()}${clean.replace(/^\/+/, "")}`;
+};
 
 const sharedPartials = {
   "site-header": `
@@ -297,7 +301,7 @@ const initAuthModal = () => {
       const email = loginForm.querySelector('[name="login-email"]')?.value?.trim() || "";
       const password = loginForm.querySelector('[name="login-password"]')?.value || "";
       try {
-        const res = await fetch(window.PrintUrgeApiPath("api/auth/login.php"), {
+        const res = await fetch(window.PrintUrgeApiPath("/api/auth/login"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
@@ -336,7 +340,7 @@ const initAuthModal = () => {
       const email = signupForm.querySelector('[name="signup-email"]')?.value?.trim() || "";
       const password = pw?.value || "";
       try {
-        const res = await fetch(window.PrintUrgeApiPath("api/auth/register.php"), {
+        const res = await fetch(window.PrintUrgeApiPath("/api/auth/register"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, email, password }),

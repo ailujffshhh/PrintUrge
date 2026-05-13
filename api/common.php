@@ -16,8 +16,13 @@ function allow_methods(array $methods): void
         exit;
     }
 
-    if (!in_array(($_SERVER['REQUEST_METHOD'] ?? 'GET'), $methods, true)) {
-        json_response(['error' => 'Method not allowed'], 405);
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    if (!in_array($method, $methods, true)) {
+        json_response([
+            'error' => 'Method not allowed',
+            'method' => $method,
+            'allowed' => $methods,
+        ], 405);
     }
 }
 
