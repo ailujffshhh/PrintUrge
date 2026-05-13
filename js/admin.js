@@ -43,12 +43,17 @@
     return !!(s && s.user && s.user.role === "admin");
   }
 
+  function apiPath(path) {
+    if (typeof window.PrintUrgeApiPath === "function") return window.PrintUrgeApiPath(path);
+    return path;
+  }
+
   async function api(path, options) {
     var opts = options || {};
     var headers = Object.assign({}, opts.headers || {});
     var tok = token();
     if (tok) headers.Authorization = "Bearer " + tok;
-    var res = await fetch(path, Object.assign({}, opts, { headers: headers }));
+    var res = await fetch(apiPath(path), Object.assign({}, opts, { headers: headers }));
     var data = {};
     try {
       data = await res.json();
@@ -98,7 +103,7 @@
   async function loadList() {
     if (!isAdminSession()) return;
     var qs = currentStatus === "all" ? "" : "?status=" + encodeURIComponent(currentStatus);
-    var data = await api("/api/admin/print-requests" + qs);
+    var data = await api("api/admin/print-requests.php" + qs);
     var items = data.items || [];
     rowsEl.innerHTML = items
       .map(function (row) {
@@ -143,7 +148,7 @@
 
   async function openRow(id) {
     selectedId = id;
-    var data = await api("/api/admin/print-requests/" + id);
+    var data = await api("api/admin/print-requests.php?id=" + encodeURIComponent(id));
     var item = data.item;
     detailTitle.textContent = "Request #" + item.id;
     detailSub.textContent =
@@ -180,7 +185,7 @@
   }
 
   async function downloadFile(storedName, originalName) {
-    var res = await fetch("/api/admin/files/" + encodeURIComponent(storedName), {
+    var res = await fetch(apiPath("api/admin/file.php?storedName=" + encodeURIComponent(storedName)), {
       headers: { Authorization: "Bearer " + token() },
     });
     if (!res.ok) {
@@ -201,7 +206,7 @@
     var email = loginForm.querySelector('[name="email"]').value.trim();
     var password = loginForm.querySelector('[name="password"]').value;
     try {
-      var data = await api("/api/auth/login", {
+      var data = await api("api/auth/login.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email, password: password }),
@@ -272,7 +277,7 @@
       admin_notes: detailForm.admin_notes.value,
     };
     try {
-      await api("/api/admin/print-requests/" + id, {
+      await api("api/admin/print-requests.php?id=" + encodeURIComponent(id), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -288,7 +293,7 @@
   btnArchive.addEventListener("click", async function () {
     var id = Number(detailForm.elements.namedItem("requestId").value);
     try {
-      await api("/api/admin/print-requests/" + id + "/archive", { method: "POST" });
+      await api("api/admin/print-requests.php?id=" + encodeURIComponent(id) + "&action=archive", { method: "POST" });
       notify("Archived.", "success");
       await loadList();
       closeDetail();
@@ -300,7 +305,7 @@
   btnRestore.addEventListener("click", async function () {
     var id = Number(detailForm.elements.namedItem("requestId").value);
     try {
-      await api("/api/admin/print-requests/" + id + "/restore", { method: "POST" });
+      await api("api/admin/print-requests.php?id=" + encodeURIComponent(id) + "&action=restore", { method: "POST" });
       notify("Restored to active.", "success");
       await loadList();
       closeDetail();
@@ -340,7 +345,7 @@
       var headers = {};
       var tok = token();
       if (tok) headers.Authorization = "Bearer " + tok;
-      var res = await fetch("/api/admin/print-requests", { method: "POST", headers: headers, body: fd });
+      var res = await fetch(apiPath("api/admin/print-requests.php"), { method: "POST", headers: headers, body: fd });
       var data = await res.json().catch(function () {
         return {};
       });

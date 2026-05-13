@@ -470,7 +470,8 @@
         var tok = window.PrintUrgeSession.getToken();
         if (tok) headers.Authorization = "Bearer " + tok;
       }
-      var res = await fetch("/api/print-requests", { method: "POST", headers: headers, body: formData });
+      var apiPath = window.PrintUrgeApiPath || function (path) { return path; };
+      var res = await fetch(apiPath("api/print-requests.php"), { method: "POST", headers: headers, body: formData });
       if (!res.ok) throw new Error("Upload failed");
       var data = await res.json();
       console.log("Upload success:", data);

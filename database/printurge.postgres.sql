@@ -1,0 +1,52 @@
+CREATE TABLE IF NOT EXISTS roles (
+  id BIGSERIAL PRIMARY KEY,
+  name VARCHAR(50) NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO roles (id, name) VALUES
+  (1, 'admin'),
+  (2, 'staff'),
+  (3, 'client')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+
+SELECT setval('roles_id_seq', GREATEST((SELECT MAX(id) FROM roles), 3), true);
+
+CREATE TABLE IF NOT EXISTS users (
+  id BIGSERIAL PRIMARY KEY,
+  role_id BIGINT NOT NULL DEFAULT 3 REFERENCES roles(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+  name VARCHAR(160) NOT NULL,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+  archived_at TIMESTAMPTZ NULL,
+  last_login_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_role_id ON users(role_id);
+CREATE INDEX IF NOT EXISTS idx_users_archived_at ON users(archived_at);
+
+CREATE TABLE IF NOT EXISTS print_requests (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
+  service VARCHAR(64) NOT NULL,
+  color_mode VARCHAR(64) NULL,
+  size_key VARCHAR(64) NULL,
+  copies INT NOT NULL DEFAULT 1 CHECK (copies > 0),
+  pages INT NOT NULL DEFAULT 1 CHECK (pages > 0),
+  custom_width VARCHAR(32) NULL,
+  custom_height VARCHAR(32) NULL,
+  files_json JSONB NOT NULL,
+  admin_notes TEXT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  archived_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_print_requests_user_id ON print_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_print_requests_status ON print_requests(status);
+CREATE INDEX IF NOT EXISTS idx_print_requests_created_at ON print_requests(created_at);
