@@ -5,14 +5,21 @@ Ordering System for Printing Shops
 
 The browser now calls PHP endpoints in `api/` for login, signup, print requests, and admin request management.
 
-Use an external PostgreSQL database such as Supabase. Run `database/printurge.postgres.sql` in that database, then set these Vercel environment variables:
+Use an external PostgreSQL database such as Supabase. The app is configured for the Supabase transaction pooler. Run `database/printurge.postgres.sql` in that database, then set these Vercel environment variables:
 
 ```text
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
+DATABASE_URL=postgresql://postgres.uyqgehcwduzafpdexpag:YOUR-PASSWORD@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres
 PRINTURGE_JWT_SECRET=use-a-long-random-secret
 ```
 
-If `DATABASE_URL` is not set, `database/db.php` uses the existing Supabase connection string as a fallback.
+If you do not want to set the full `DATABASE_URL`, set `SUPABASE_DB_PASSWORD` instead. `database/db.php` already has these transaction pooler defaults:
+
+```text
+SUPABASE_DB_HOST=aws-1-ap-southeast-1.pooler.supabase.com
+SUPABASE_DB_PORT=6543
+SUPABASE_DB_NAME=postgres
+SUPABASE_DB_USER=postgres.uyqgehcwduzafpdexpag
+```
 
 Vercel uses the PHP community runtime configured in `vercel.json`. Uploaded files are stored in the external PostgreSQL database so Vercel does not need persistent local storage.
 

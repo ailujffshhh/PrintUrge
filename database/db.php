@@ -8,20 +8,33 @@ function printurge_db(): PDO
         return $pdo;
     }
 
-    $url = getenv('DATABASE_URL') ?: 'postgresql://postgres.uyqgehcwduzafpdexpag:01102006Estonio!@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres';
-    $parts = parse_url($url);
+    $url = getenv('DATABASE_URL') ?: '';
 
-    if (!$parts || empty($parts['host']) || empty($parts['path']) || empty($parts['user'])) {
-        throw new RuntimeException('Invalid database connection string.');
+    if ($url !== '') {
+        $parts = parse_url($url);
+        if (!$parts || empty($parts['host']) || empty($parts['path']) || empty($parts['user'])) {
+            throw new RuntimeException('Invalid DATABASE_URL connection string.');
+        }
+
+        $scheme = $parts['scheme'] ?? 'pgsql';
+        $driver = strpos($scheme, 'postgres') === 0 ? 'pgsql' : 'mysql';
+        $host = $parts['host'];
+        $port = (string)($parts['port'] ?? ($driver === 'pgsql' ? 6543 : 3306));
+        $dbname = ltrim((string)$parts['path'], '/');
+        $user = rawurldecode((string)$parts['user']);
+        $password = rawurldecode((string)($parts['pass'] ?? ''));
+    } else {
+        $driver = 'pgsql';
+        $host = getenv('SUPABASE_DB_HOST') ?: 'aws-1-ap-southeast-1.pooler.supabase.com';
+        $port = getenv('SUPABASE_DB_PORT') ?: '6543';
+        $dbname = getenv('SUPABASE_DB_NAME') ?: 'postgres';
+        $user = getenv('SUPABASE_DB_USER') ?: 'postgres.uyqgehcwduzafpdexpag';
+        $password = getenv('SUPABASE_DB_PASSWORD') ?: getenv('DB_PASSWORD') ?: '';
     }
 
-    $scheme = $parts['scheme'] ?? 'pgsql';
-    $driver = strpos($scheme, 'postgres') === 0 ? 'pgsql' : 'mysql';
-    $host = $parts['host'];
-    $port = (string)($parts['port'] ?? ($driver === 'pgsql' ? 6543));
-    $dbname = ltrim((string)$parts['path'], '/');
-    $user = rawurldecode((string)$parts['user']);
-    $password = rawurldecode((string)($parts['pass'] ?? ''));
+    if ($password === '') {
+        throw new RuntimeException('Database password is missing. Set DATABASE_URL or SUPABASE_DB_PASSWORD in Vercel.');
+    }
 
     if ($driver === 'pgsql') {
         $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode=require";
@@ -32,7 +45,7 @@ function printurge_db(): PDO
     $pdo = new PDO($dsn, $user, $password, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
+        PDO::ATTR_EMULATE_PREPARES => $driver === 'pgsql',
     ]);
 
     return $pdo;
