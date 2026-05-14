@@ -39,12 +39,24 @@
           <div class="admin-filters" id="admin-status-filters">
             <button type="button" class="btn btn-outline is-active" data-status="active">Active</button>
             <button type="button" class="btn btn-outline" data-status="archived">Archived</button>
-            <button type="button" class="btn btn-outline" data-status="history">Complete</button>
+            <button type="button" class="btn btn-outline" data-status="history">Completed transaction</button>
           </div>
           <div class="admin-filters">
             <button type="button" class="btn btn-outline admin-history-btn" id="admin-history-shortcut" aria-label="View transaction history" title="Transaction history"><span aria-hidden="true"></span></button>
             <button type="button" class="btn btn-primary" id="admin-open-create">Create request</button>
           </div>
+        </div>
+
+        <div class="admin-history-tools" id="admin-history-tools" hidden>
+          <label class="field"><span>Search transaction ID</span><input type="search" id="admin-history-search" placeholder="PU-20260514..." autocomplete="off"/></label>
+          <label class="field"><span>Filter</span>
+            <select id="admin-history-filter">
+              <option value="all">All completed</option>
+              <option value="paid">Paid</option>
+              <option value="pending_review">Proof review</option>
+              <option value="unpaid">Unpaid</option>
+            </select>
+          </label>
         </div>
 
         <div class="admin-table-wrap">

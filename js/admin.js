@@ -7,6 +7,9 @@
   var rowsEl = document.getElementById("admin-rows");
   var filters = document.getElementById("admin-status-filters");
   var historyShortcut = document.getElementById("admin-history-shortcut");
+  var historyTools = document.getElementById("admin-history-tools");
+  var historySearch = document.getElementById("admin-history-search");
+  var historyFilter = document.getElementById("admin-history-filter");
   var createPanel = document.getElementById("admin-create");
   var createForm = document.getElementById("admin-create-form");
   var openCreateBtn = document.getElementById("admin-open-create");
@@ -29,6 +32,7 @@
 
   var currentStatus = "active";
   var selectedId = null;
+  var currentItems = [];
 
   function notify(msg, type) {
     if (typeof window.showToast === "function") {
@@ -86,6 +90,70 @@
     if (hasText(item.admin_notes)) markers.push('<span class="admin-marker is-admin-note">Admin note</span>');
     if (item.payment_status === "paid") markers.push('<span class="admin-marker is-paid">Paid</span>');
     return markers.join("");
+  }
+
+  function setHistoryToolsVisible() {
+    if (historyTools) historyTools.hidden = currentStatus !== "history";
+  }
+
+  function filteredItems(items) {
+    if (currentStatus !== "history") return items;
+    var query = historySearch ? historySearch.value.trim().toLowerCase() : "";
+    var payment = historyFilter ? historyFilter.value : "all";
+    return items.filter(function (item) {
+      var tid = String(item.transaction_id || "").toLowerCase();
+      var matchesSearch = !query || tid.indexOf(query) !== -1;
+      var matchesPayment = payment === "all" || item.payment_status === payment;
+      return matchesSearch && matchesPayment;
+    });
+  }
+
+  function renderRows(items) {
+    var visibleItems = filteredItems(items);
+    if (!visibleItems.length) {
+      rowsEl.innerHTML =
+        '<tr><td colspan="8">' +
+        (currentStatus === "history" ? "No completed transactions match your filters." : "No print requests yet.") +
+        "</td></tr>";
+      return;
+    }
+
+    rowsEl.innerHTML = visibleItems
+      .map(function (row) {
+        var cust = row.user_name || row.customer_name || row.user_email || "Guest";
+        if (row.user_email && row.user_name) cust = row.user_name + " - " + row.user_email;
+        var statusBadge =
+          row.status === "archived"
+            ? '<span class="admin-badge is-archived">Archived</span>'
+            : '<span class="admin-badge is-active">Active</span>';
+        var payment;
+        if (row.payment_status === "paid") {
+          payment = '<span class="payment-badge is-paid">Paid</span>';
+        } else if (row.payment_status === "pending_review") {
+          payment = '<span class="payment-badge is-pending">Proof</span>';
+        } else {
+          payment =
+            '<button type="button" class="payment-badge is-unpaid" data-pay-row="' + row.id + '">Unpaid</button>';
+        }
+        var orderSt = row.order_status || "submitted";
+        var markers = markerHtml(row);
+
+        return (
+          '<tr data-id="' + row.id + '">' +
+          '<td data-label="ID">' + row.id + "</td>" +
+          '<td data-label="Transaction"><span class="admin-transaction-id">' + escapeHtml(row.transaction_id || "-") + "</span>" +
+          (markers ? '<span class="admin-row-markers">' + markers + "</span>" : "") +
+          "</td>" +
+          '<td data-label="Service">' + escapeHtml(row.service) + "</td>" +
+          '<td data-label="Customer">' + escapeHtml(cust) + "</td>" +
+          '<td data-label="Payment">' + payment + "</td>" +
+          '<td data-label="Order">' + escapeHtml(orderSt) + "</td>" +
+          '<td data-label="Status">' + statusBadge + "</td>" +
+          '<td data-label="Created">' + escapeHtml(fmtDate(row.created_at)) + "</td>" +
+          "</tr>"
+        );
+      })
+      .join("");
   }
 
   function setButtonLoading(btn, loading, label) {
@@ -149,6 +217,7 @@
 
   async function loadList() {
     if (!isAdminSession() || !rowsEl) return;
+    setHistoryToolsVisible();
     if (window.PrintUrgeSkeleton) {
       window.PrintUrgeSkeleton.tableRows(rowsEl, 6, 8);
     } else {
@@ -159,49 +228,10 @@
       var qs = currentStatus === "all" ? "" : "?status=" + encodeURIComponent(currentStatus);
       var data = await api("/api/admin/print-requests" + qs);
       var items = data.items || [];
+      currentItems = items;
 
       rowsEl.removeAttribute("aria-busy");
-      if (!items.length) {
-        rowsEl.innerHTML = '<tr><td colspan="8">No print requests yet.</td></tr>';
-        return;
-      }
-
-      rowsEl.innerHTML = items
-        .map(function (row) {
-          var cust = row.user_name || row.customer_name || row.user_email || "Guest";
-          if (row.user_email && row.user_name) cust = row.user_name + " - " + row.user_email;
-          var statusBadge =
-            row.status === "archived"
-              ? '<span class="admin-badge is-archived">Archived</span>'
-              : '<span class="admin-badge is-active">Active</span>';
-          var payment;
-          if (row.payment_status === "paid") {
-            payment = '<span class="payment-badge is-paid">Paid</span>';
-          } else if (row.payment_status === "pending_review") {
-            payment = '<span class="payment-badge is-pending">Proof</span>';
-          } else {
-            payment =
-              '<button type="button" class="payment-badge is-unpaid" data-pay-row="' + row.id + '">Unpaid</button>';
-          }
-          var orderSt = row.order_status || "submitted";
-          var markers = markerHtml(row);
-
-          return (
-            '<tr data-id="' + row.id + '">' +
-            '<td data-label="ID">' + row.id + "</td>" +
-            '<td data-label="Transaction"><span class="admin-transaction-id">' + escapeHtml(row.transaction_id || "-") + "</span>" +
-            (markers ? '<span class="admin-row-markers">' + markers + "</span>" : "") +
-            "</td>" +
-            '<td data-label="Service">' + escapeHtml(row.service) + "</td>" +
-            '<td data-label="Customer">' + escapeHtml(cust) + "</td>" +
-            '<td data-label="Payment">' + payment + "</td>" +
-            '<td data-label="Order">' + escapeHtml(orderSt) + "</td>" +
-            '<td data-label="Status">' + statusBadge + "</td>" +
-            '<td data-label="Created">' + escapeHtml(fmtDate(row.created_at)) + "</td>" +
-            "</tr>"
-          );
-        })
-        .join("");
+      renderRows(items);
     } catch (err) {
       rowsEl.removeAttribute("aria-busy");
       rowsEl.innerHTML = '<tr><td colspan="8"><div class="skeleton-error">We could not load print requests. Please try again.</div></td></tr>';
@@ -435,6 +465,8 @@
       var btn = e.target.closest("[data-status]");
       if (!btn) return;
       currentStatus = btn.getAttribute("data-status") || "active";
+      if (historySearch && currentStatus !== "history") historySearch.value = "";
+      if (historyFilter && currentStatus !== "history") historyFilter.value = "all";
       filters.querySelectorAll("[data-status]").forEach(function (b) {
         b.classList.toggle("is-active", b === btn);
       });
@@ -449,11 +481,11 @@
 
   if (historyShortcut) {
     historyShortcut.addEventListener("click", async function () {
-      var historyFilter = filters && filters.querySelector('[data-status="history"]');
+      var historyButton = filters && filters.querySelector('[data-status="history"]');
       currentStatus = "history";
       if (filters) {
         filters.querySelectorAll("[data-status]").forEach(function (b) {
-          b.classList.toggle("is-active", b === historyFilter);
+          b.classList.toggle("is-active", b === historyButton);
         });
       }
       try {
@@ -464,6 +496,18 @@
         historyShortcut.disabled = false;
         historyShortcut.classList.remove("is-loading");
       }
+    });
+  }
+
+  if (historySearch) {
+    historySearch.addEventListener("input", function () {
+      renderRows(currentItems);
+    });
+  }
+
+  if (historyFilter) {
+    historyFilter.addEventListener("change", function () {
+      renderRows(currentItems);
     });
   }
 
