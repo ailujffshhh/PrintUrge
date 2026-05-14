@@ -6,6 +6,7 @@
   var loginForm = document.getElementById("admin-login-form");
   var rowsEl = document.getElementById("admin-rows");
   var filters = document.getElementById("admin-status-filters");
+  var historyShortcut = document.getElementById("admin-history-shortcut");
   var createPanel = document.getElementById("admin-create");
   var createForm = document.getElementById("admin-create-form");
   var openCreateBtn = document.getElementById("admin-open-create");
@@ -442,6 +443,26 @@
         await loadList();
       } finally {
         setButtonLoading(btn, false);
+      }
+    });
+  }
+
+  if (historyShortcut) {
+    historyShortcut.addEventListener("click", async function () {
+      var historyFilter = filters && filters.querySelector('[data-status="history"]');
+      currentStatus = "history";
+      if (filters) {
+        filters.querySelectorAll("[data-status]").forEach(function (b) {
+          b.classList.toggle("is-active", b === historyFilter);
+        });
+      }
+      try {
+        historyShortcut.disabled = true;
+        historyShortcut.classList.add("is-loading");
+        await loadList();
+      } finally {
+        historyShortcut.disabled = false;
+        historyShortcut.classList.remove("is-loading");
       }
     });
   }
