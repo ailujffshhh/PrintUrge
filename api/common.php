@@ -95,7 +95,8 @@ function ensure_database_schema(PDO $pdo): void
     }
 
     $schemaTtl = printurge_schema_cache_ttl();
-    if ($schemaTtl > 0 && printurge_cache_get('pgsql_schema_ready') !== null) {
+    $schemaCacheKey = 'pgsql_schema_ready:v2';
+    if ($schemaTtl > 0 && printurge_cache_get($schemaCacheKey) !== null) {
         $done = true;
         return;
     }
@@ -169,6 +170,7 @@ function ensure_database_schema(PDO $pdo): void
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS customer_notes TEXT NULL");
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS payment_method VARCHAR(80) NULL");
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid'");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ NULL");
     $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_print_requests_transaction_id ON print_requests(transaction_id)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_user_id ON print_requests(user_id)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_status ON print_requests(status)");
@@ -193,12 +195,11 @@ function ensure_database_schema(PDO $pdo): void
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255) NULL");
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS receipt_stored_name VARCHAR(80) NULL");
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS order_status VARCHAR(32) NOT NULL DEFAULT 'submitted'");
-    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ NULL");
     $pdo->exec('ALTER TABLE print_requests DROP CONSTRAINT IF EXISTS print_requests_payment_status_check');
     $pdo->exec("ALTER TABLE print_requests ADD CONSTRAINT print_requests_payment_status_check CHECK (payment_status IN ('unpaid', 'pending_review', 'paid'))");
 
     if ($schemaTtl > 0) {
-        printurge_cache_set('pgsql_schema_ready', 1, $schemaTtl);
+        printurge_cache_set($schemaCacheKey, 1, $schemaTtl);
     }
 
     $done = true;
