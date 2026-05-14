@@ -1643,7 +1643,7 @@ ul {
 
 .admin-history-tools {
 	display: grid;
-	grid-template-columns: minmax(14rem, 1fr) minmax(11rem, 0.35fr);
+	grid-template-columns: minmax(14rem, 1fr) minmax(10rem, 0.35fr) minmax(9rem, 0.3fr) minmax(9rem, 0.3fr);
 	gap: 0.75rem;
 	margin: 0 1rem 1rem;
 	padding: 0.85rem;

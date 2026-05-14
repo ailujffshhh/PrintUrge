@@ -10,6 +10,8 @@
   var historyTools = document.getElementById("admin-history-tools");
   var historySearch = document.getElementById("admin-history-search");
   var historyFilter = document.getElementById("admin-history-filter");
+  var historyDateFrom = document.getElementById("admin-history-date-from");
+  var historyDateTo = document.getElementById("admin-history-date-to");
   var createPanel = document.getElementById("admin-create");
   var createForm = document.getElementById("admin-create-form");
   var openCreateBtn = document.getElementById("admin-open-create");
@@ -96,20 +98,23 @@
     if (historyTools) historyTools.hidden = currentStatus !== "history";
   }
 
-  function filteredItems(items) {
-    if (currentStatus !== "history") return items;
-    var query = historySearch ? historySearch.value.trim().toLowerCase() : "";
-    var payment = historyFilter ? historyFilter.value : "all";
-    return items.filter(function (item) {
-      var tid = String(item.transaction_id || "").toLowerCase();
-      var matchesSearch = !query || tid.indexOf(query) !== -1;
-      var matchesPayment = payment === "all" || item.payment_status === payment;
-      return matchesSearch && matchesPayment;
-    });
+  function historyQueryString() {
+    var params = ["status=" + encodeURIComponent(currentStatus)];
+    if (currentStatus === "history") {
+      var transactionId = historySearch ? historySearch.value.trim() : "";
+      var paymentStatus = historyFilter ? historyFilter.value : "all";
+      var dateFrom = historyDateFrom ? historyDateFrom.value : "";
+      var dateTo = historyDateTo ? historyDateTo.value : "";
+      if (transactionId) params.push("transaction_id=" + encodeURIComponent(transactionId));
+      if (paymentStatus && paymentStatus !== "all") params.push("payment_status=" + encodeURIComponent(paymentStatus));
+      if (dateFrom) params.push("date_from=" + encodeURIComponent(dateFrom));
+      if (dateTo) params.push("date_to=" + encodeURIComponent(dateTo));
+    }
+    return "?" + params.join("&");
   }
 
   function renderRows(items) {
-    var visibleItems = filteredItems(items);
+    var visibleItems = items;
     if (!visibleItems.length) {
       rowsEl.innerHTML =
         '<tr><td colspan="8">' +
@@ -137,6 +142,7 @@
         }
         var orderSt = row.order_status || "submitted";
         var markers = markerHtml(row);
+        var displayDate = currentStatus === "history" ? row.completed_at || row.updated_at || row.created_at : row.created_at;
 
         return (
           '<tr data-id="' + row.id + '">' +
@@ -149,7 +155,7 @@
           '<td data-label="Payment">' + payment + "</td>" +
           '<td data-label="Order">' + escapeHtml(orderSt) + "</td>" +
           '<td data-label="Status">' + statusBadge + "</td>" +
-          '<td data-label="Created">' + escapeHtml(fmtDate(row.created_at)) + "</td>" +
+          '<td data-label="Date">' + escapeHtml(fmtDate(displayDate)) + "</td>" +
           "</tr>"
         );
       })
@@ -225,7 +231,7 @@
     }
 
     try {
-      var qs = currentStatus === "all" ? "" : "?status=" + encodeURIComponent(currentStatus);
+      var qs = historyQueryString();
       var data = await api("/api/admin/print-requests" + qs);
       var items = data.items || [];
       currentItems = items;
@@ -467,6 +473,8 @@
       currentStatus = btn.getAttribute("data-status") || "active";
       if (historySearch && currentStatus !== "history") historySearch.value = "";
       if (historyFilter && currentStatus !== "history") historyFilter.value = "all";
+      if (historyDateFrom && currentStatus !== "history") historyDateFrom.value = "";
+      if (historyDateTo && currentStatus !== "history") historyDateTo.value = "";
       filters.querySelectorAll("[data-status]").forEach(function (b) {
         b.classList.toggle("is-active", b === btn);
       });
@@ -500,14 +508,38 @@
   }
 
   if (historySearch) {
+    var searchTimer = null;
     historySearch.addEventListener("input", function () {
-      renderRows(currentItems);
+      window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(function () {
+        loadList().catch(function (err) {
+          notify(err.message || "Could not search transactions.", "error");
+        });
+      }, 250);
     });
   }
 
   if (historyFilter) {
     historyFilter.addEventListener("change", function () {
-      renderRows(currentItems);
+      loadList().catch(function (err) {
+        notify(err.message || "Could not filter transactions.", "error");
+      });
+    });
+  }
+
+  if (historyDateFrom) {
+    historyDateFrom.addEventListener("change", function () {
+      loadList().catch(function (err) {
+        notify(err.message || "Could not filter transactions.", "error");
+      });
+    });
+  }
+
+  if (historyDateTo) {
+    historyDateTo.addEventListener("change", function () {
+      loadList().catch(function (err) {
+        notify(err.message || "Could not filter transactions.", "error");
+      });
     });
   }
 

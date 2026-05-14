@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS print_requests (
   admin_notes TEXT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
   archived_at TIMESTAMPTZ NULL,
+  completed_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -59,6 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_print_requests_user_id ON print_requests(user_id)
 CREATE INDEX IF NOT EXISTS idx_print_requests_status ON print_requests(status);
 CREATE INDEX IF NOT EXISTS idx_print_requests_payment_status ON print_requests(payment_status);
 CREATE INDEX IF NOT EXISTS idx_print_requests_created_at ON print_requests(created_at);
+CREATE INDEX IF NOT EXISTS idx_print_requests_completed_at ON print_requests(completed_at);
 
 CREATE TABLE IF NOT EXISTS print_request_files (
   id BIGSERIAL PRIMARY KEY,

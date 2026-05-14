@@ -26,7 +26,7 @@ try {
 
     $orders = $pdo->prepare(
         'SELECT id, transaction_id, service, payment_status, payment_method, order_status,
-                copies, pages, color_mode, size_key, customer_notes, admin_notes, created_at, updated_at
+                copies, pages, color_mode, size_key, customer_notes, admin_notes, completed_at, created_at, updated_at
          FROM print_requests
          WHERE user_id = ? OR LOWER(TRIM(customer_email)) = LOWER(TRIM(?))
          ORDER BY created_at DESC

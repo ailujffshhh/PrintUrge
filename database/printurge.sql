@@ -50,15 +50,16 @@ CREATE TABLE print_requests (
   admin_notes TEXT NULL,
   status ENUM('active','archived') NOT NULL DEFAULT 'active',
   archived_at TIMESTAMP NULL DEFAULT NULL,
+  completed_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_print_requests_user_id (user_id),
   KEY idx_print_requests_status (status),
+  KEY idx_print_requests_completed_at (completed_at),
   KEY idx_print_requests_created_at (created_at),
   CONSTRAINT fk_print_requests_user_id
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON UPDATE CASCADE
     ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-

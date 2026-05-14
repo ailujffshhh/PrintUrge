@@ -16,9 +16,19 @@ try {
 
     if ($method === 'GET' && !$id) {
         $status = (string)($_GET['status'] ?? 'active');
+        $transactionId = trim((string)($_GET['transaction_id'] ?? ''));
+        $paymentStatus = strtolower(trim((string)($_GET['payment_status'] ?? '')));
+        $dateFrom = trim((string)($_GET['date_from'] ?? ''));
+        $dateTo = trim((string)($_GET['date_to'] ?? ''));
         $listTtl = printurge_admin_list_cache_ttl();
         $gen = printurge_admin_cache_generation();
-        $listKey = 'admin_pr_list:' . $gen . ':' . $status;
+        $listKey = 'admin_pr_list:' . $gen . ':' . sha1(json_encode([
+            'status' => $status,
+            'transaction_id' => $transactionId,
+            'payment_status' => $paymentStatus,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+        ]));
         if ($listTtl > 0) {
             $cached = printurge_cache_get($listKey);
             if (is_array($cached) && array_key_exists('items', $cached)) {
@@ -33,15 +43,34 @@ try {
         } elseif ($status === 'history') {
             $where .= " AND pr.order_status = 'completed'";
         }
+        if ($transactionId !== '') {
+            $where .= ' AND LOWER(COALESCE(pr.transaction_id, \'\')) LIKE ?';
+            $params[] = '%' . strtolower(substr($transactionId, 0, 40)) . '%';
+        }
+        if (in_array($paymentStatus, ['paid', 'pending_review', 'unpaid'], true)) {
+            $where .= ' AND pr.payment_status = ?';
+            $params[] = $paymentStatus;
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom)) {
+            $dateField = $status === 'history' ? 'COALESCE(pr.completed_at, pr.updated_at, pr.created_at)' : 'pr.created_at';
+            $where .= " AND {$dateField} >= ?";
+            $params[] = $dateFrom . ' 00:00:00';
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
+            $dateField = $status === 'history' ? 'COALESCE(pr.completed_at, pr.updated_at, pr.created_at)' : 'pr.created_at';
+            $where .= " AND {$dateField} <= ?";
+            $params[] = $dateTo . ' 23:59:59';
+        }
+        $orderBy = $status === 'history' ? 'COALESCE(pr.completed_at, pr.updated_at, pr.created_at) DESC' : 'pr.created_at DESC';
         $stmt = $pdo->prepare(
             "SELECT pr.id, pr.transaction_id, pr.service, pr.status, pr.payment_status, pr.payment_method,
-                    pr.customer_name, pr.customer_email, pr.order_status, pr.created_at, pr.archived_at,
+                    pr.customer_name, pr.customer_email, pr.order_status, pr.created_at, pr.archived_at, pr.completed_at,
                     pr.copies, pr.pages, pr.color_mode, pr.size_key, pr.customer_notes, pr.admin_notes,
                     u.name AS user_name, u.email AS user_email
              FROM print_requests pr
              LEFT JOIN users u ON u.id = pr.user_id
              {$where}
-             ORDER BY pr.created_at DESC
+             ORDER BY {$orderBy}
              LIMIT 500"
         );
         $stmt->execute($params);
@@ -189,7 +218,7 @@ try {
             json_response(['ok' => true]);
         }
         if ($action === 'complete') {
-            $stmt = $pdo->prepare("UPDATE print_requests SET order_status = 'completed' WHERE id = ?");
+            $stmt = $pdo->prepare("UPDATE print_requests SET order_status = 'completed', completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP WHERE id = ?");
             $stmt->execute([$id]);
             if ($stmt->rowCount() < 1) {
                 json_response(['error' => 'Not found'], 404);
@@ -232,15 +261,26 @@ try {
         ];
         $fields = [];
         $values = [];
+        $cleanOrderStatus = null;
         foreach ($allowed as $field => $clean) {
             if (array_key_exists($field, $body)) {
+                $cleanValue = $clean($body[$field]);
                 $fields[] = "{$field} = ?";
-                $values[] = $clean($body[$field]);
+                $values[] = $cleanValue;
+                if ($field === 'order_status') {
+                    $cleanOrderStatus = $cleanValue;
+                }
             }
         }
         if (!$fields) {
             json_response(['error' => 'No fields to update'], 400);
         }
+        if ($cleanOrderStatus === 'completed') {
+            $fields[] = 'completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP)';
+        } elseif ($cleanOrderStatus !== null) {
+            $fields[] = 'completed_at = NULL';
+        }
+        $fields[] = 'updated_at = CURRENT_TIMESTAMP';
         $values[] = $id;
         $stmt = $pdo->prepare('UPDATE print_requests SET ' . implode(', ', $fields) . ' WHERE id = ?');
         $stmt->execute($values);

@@ -159,6 +159,7 @@ function ensure_database_schema(PDO $pdo): void
           admin_notes TEXT NULL,
           status VARCHAR(20) NOT NULL DEFAULT 'active',
           archived_at TIMESTAMPTZ NULL,
+          completed_at TIMESTAMPTZ NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
@@ -173,6 +174,7 @@ function ensure_database_schema(PDO $pdo): void
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_status ON print_requests(status)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_payment_status ON print_requests(payment_status)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_created_at ON print_requests(created_at)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_completed_at ON print_requests(completed_at)");
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS print_request_files (
           id BIGSERIAL PRIMARY KEY,
@@ -191,6 +193,7 @@ function ensure_database_schema(PDO $pdo): void
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255) NULL");
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS receipt_stored_name VARCHAR(80) NULL");
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS order_status VARCHAR(32) NOT NULL DEFAULT 'submitted'");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ NULL");
     $pdo->exec('ALTER TABLE print_requests DROP CONSTRAINT IF EXISTS print_requests_payment_status_check');
     $pdo->exec("ALTER TABLE print_requests ADD CONSTRAINT print_requests_payment_status_check CHECK (payment_status IN ('unpaid', 'pending_review', 'paid'))");
 
