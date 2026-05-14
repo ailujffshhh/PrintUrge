@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PrintUrge — Premium Printing Platform</title>
+  <link rel="stylesheet" href="css/redesign.css"/>
+  <style>
+    /* Hero Specifics */
+    .hero {
+      padding-top: 10rem;
+      padding-bottom: 6rem;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    .hero-content h1 {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-content p {
+      font-size: 1.25rem;
+      color: var(--fg-muted);
+      max-width: 32ch;
+      margin-bottom: 2.5rem;
+    }
+
+    /* Quick Print Card Redesign */
+    .quick-print-card {
+      padding: 2rem;
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .quick-print-card h2 {
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .quick-print-card h2::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    .form-group {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--fg-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-control {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      padding: 0.75rem;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .drop-zone-mini {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .drop-zone-mini:hover {
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .drop-zone-mini p {
+      font-size: 0.9rem;
+      color: var(--fg-muted);
+    }
+
+    .drop-zone-mini strong {
+      color: var(--fg);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    /* Services Section */
+    .section-title {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .section-title h2 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .service-grid-redesign {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .service-card-redesign {
+      padding: 2rem;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      height: 100%;
+    }
+
+    .service-card-redesign:hover {
+      transform: translateY(-8px) scale(1.02);
+      border-color: var(--accent);
+    }
+
+    .service-icon-box {
+      width: 48px;
+      height: 48px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+    }
+
+    .service-card-redesign h3 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .service-card-redesign p {
+      color: var(--fg-muted);
+      font-size: 0.95rem;
+      flex-grow: 1;
+    }
+
+    /* Track Order Strip */
+    .track-strip {
+      margin: 4rem 0;
+      padding: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+
+    .track-info h3 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 3rem;
+      }
+      .hero-content p {
+        margin-inline: auto;
+      }
+      .track-strip {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-bg">
+    <div class="ambient-grid"></div>
+    <div class="ambient-blob"></div>
+  </div>
+
+  <header class="site-header" id="main-header">
+    <div class="container nav-shell">
+      <a href="#" class="brand">
+        <img src="asssets/Icons/PrintUrge_Logo.svg" alt="PrintUrge" class="brand-logo"/>
+      </a>
+      <nav class="nav-links">
+        <a href="#services">Services</a>
+        <a href="#membership">Membership</a>
+        <a href="pages/track-order.html">Track Order</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="btn btn-outline">Log In</button>
+        <button class="btn btn-primary">Sign Up</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <h1 class="fade-up stagger-1 text-gradient">The future of printing is here.</h1>
+          <p class="fade-up stagger-2">Effortless file submission, premium quality output, and lightning-fast turnaround. Redefining the print experience for the digital age.</p>
+          <div class="hero-btns fade-up stagger-3">
+            <button class="btn btn-primary btn-lg">Start Printing Now</button>
+            <button class="btn btn-outline btn-lg">View Services</button>
+          </div>
+        </div>
+
+        <div class="hero-visual fade-up stagger-2">
+          <div class="glass-card quick-print-card">
+            <h2>Quick Print</h2>
+            <div class="form-group">
+              <label>Upload File</label>
+              <div class="drop-zone-mini">
+                <strong>Drop your files here</strong>
+                <p>Support for PDF, DOCX, PNG, JPG</p>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Service Type</label>
+              <select class="form-control">
+                <option>Document Printing</option>
+                <option>Photocopying</option>
+                <option>Lamination</option>
+                <option>Poster Printing</option>
+              </select>
+            </div>
+            <button class="btn btn-primary full-width">Submit Request</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="container">
+      <div class="glass-card track-strip fade-up">
+        <div class="track-info">
+          <h3>Already placed an order?</h3>
+          <p>Track your print progress and pickup status in real-time.</p>
+        </div>
+        <button class="btn btn-outline">
+          Track My Order
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <section class="section" id="services">
+      <div class="container">
+        <div class="section-title fade-up">
+          <h2 class="text-gradient">Our Services</h2>
+          <p>Precision tools for your academic and creative needs.</p>
+        </div>
+        
+        <div class="service-grid-redesign">
+          <!-- Document Printing -->
+          <div class="glass-card service-card-redesign fade-up" style="animation-delay: 0.1s">
+            <div class="service-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div>
+              <h3>Document Printing</h3>
+              <p>Crystal clear prints for your reports, assignments, and professional files.</p>
+            </div>
+          </div>
+
+          <!-- Poster Printing -->
+          <div class="glass-card service-card-redesign fade-up" style="animation-delay: 0.2s">
+            <div class="service-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+            <div>
+              <h3>Poster Printing</h3>
+              <p>Vibrant large-format prints that make your creative vision stand out.</p>
+            </div>
+          </div>
+
+          <!-- Lamination -->
+          <div class="glass-card service-card-redesign fade-up" style="animation-delay: 0.3s">
+            <div class="service-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+              <h3>Lamination</h3>
+              <p>Maximum protection for your important documents and display materials.</p>
+            </div>
+          </div>
+
+          <!-- Photocopying -->
+          <div class="glass-card service-card-redesign fade-up" style="animation-delay: 0.4s">
+            <div class="service-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </div>
+            <div>
+              <h3>Photocopying</h3>
+              <p>High-speed, high-fidelity copies for your bulk academic requirements.</p>
+            </div>
+          </div>
+
+          <!-- Binding -->
+          <div class="glass-card service-card-redesign fade-up" style="animation-delay: 0.5s">
+            <div class="service-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            </div>
+            <div>
+              <h3>Binding Services</h3>
+              <p>Professional soft and spiral binding for a polished, final presentation.</p>
+            </div>
+          </div>
+
+          <!-- Photo ID -->
+          <div class="glass-card service-card-redesign fade-up" style="animation-delay: 0.6s">
+            <div class="service-icon-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 13h2"/><path d="M15 9h2"/></svg>
+            </div>
+            <div>
+              <h3>Photo & ID</h3>
+              <p>Standardized ID printing and high-quality photo paper outputs.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="membership-premium" id="membership">
+      <div class="container membership-grid">
+        <div class="membership-info fade-up">
+          <h2 class="text-gradient">Upgrade to Premium</h2>
+          <p>Unlock the full power of PrintUrge. Save more, print faster, and enjoy exclusive benefits designed for power users.</p>
+          
+          <div class="membership-perks-grid">
+            <div class="perk-item">
+              <div class="perk-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div>
+                <strong>10% Discount</strong>
+                <p>On every bulk order over 50 pages.</p>
+              </div>
+            </div>
+            <div class="perk-item">
+              <div class="perk-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div>
+                <strong>Priority Queue</strong>
+                <p>Skip the line during rush hours.</p>
+              </div>
+            </div>
+            <div class="perk-item">
+              <div class="perk-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div>
+                <strong>100 Credits</strong>
+                <p>Free monthly printing credits.</p>
+              </div>
+            </div>
+            <div class="perk-item">
+              <div class="perk-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div>
+                <strong>Cloud Storage</strong>
+                <p>Save your common files for one-tap printing.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card membership-card-premium fade-up" style="animation-delay: 0.2s">
+          <div class="badge" style="background: var(--accent); color: var(--bg); margin-bottom: 1rem; border:none; padding: 0.25rem 0.75rem; border-radius: 99px; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;">Most Popular</div>
+          <h3>Premium Plan</h3>
+          <p>Best for students and small teams.</p>
+          <div class="price-tag">$9.99<span>/mo</span></div>
+          <button class="btn btn-primary full-width" style="margin-top: 1rem">Get Premium Access</button>
+          <p style="text-align: center; font-size: 0.8rem; margin-top: 1rem; color: var(--fg-muted)">30-day money-back guarantee.</p>
+        </div>
+      </div>
+    </section>
+    <section class="section" id="how-it-works">
+      <div class="container">
+        <div class="section-title fade-up">
+          <h2 class="text-gradient">How it Works</h2>
+          <p>Four simple steps to your high-quality prints.</p>
+        </div>
+        <div class="membership-perks-grid">
+          <div class="glass-card service-card-redesign fade-up" style="animation-delay: 0.1s">
+            <div class="price-tag" style="font-size: 1.5rem; color: var(--accent); margin: 0">01</div>
+            <h3>Upload Files</h3>
+            <p>Securely upload your documents through our encrypted platform.</p>
+          </div>
+          <div class="glass-card service-card-redesign fade-up" style="animation-delay: 0.2s">
+            <div class="price-tag" style="font-size: 1.5rem; color: var(--accent); margin: 0">02</div>
+            <h3>Configure</h3>
+            <p>Select your paper size, color mode, and finishing options.</p>
+          </div>
+          <div class="glass-card service-card-redesign fade-up" style="animation-delay: 0.3s">
+            <div class="price-tag" style="font-size: 1.5rem; color: var(--accent); margin: 0">03</div>
+            <h3>Pay Securely</h3>
+            <p>Fast and safe payments via e-wallet or credit card.</p>
+          </div>
+          <div class="glass-card service-card-redesign fade-up" style="animation-delay: 0.4s">
+            <div class="price-tag" style="font-size: 1.5rem; color: var(--accent); margin: 0">04</div>
+            <h3>Collect</h3>
+            <p>Pick up your order at your chosen partner shop instantly.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="faq">
+      <div class="container">
+        <div class="section-title fade-up">
+          <h2 class="text-gradient">Common Questions</h2>
+        </div>
+        <div style="max-width: 800px; margin: 0 auto; display: grid; gap: 1rem;">
+          <div class="glass-card fade-up" style="padding: 1.5rem; cursor: pointer;" onclick="this.querySelector('p').style.display = this.querySelector('p').style.display === 'none' ? 'block' : 'none'">
+            <h3 style="font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center;">
+              Do I need an account to print?
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </h3>
+            <p style="margin-top: 1rem; color: var(--fg-muted); display: none;">No, you can use our Quick Print feature as a guest. However, an account lets you track history and save preferences.</p>
+          </div>
+          <div class="glass-card fade-up" style="padding: 1.5rem; cursor: pointer;" onclick="this.querySelector('p').style.display = this.querySelector('p').style.display === 'none' ? 'block' : 'none'">
+            <h3 style="font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center;">
+              What file formats are supported?
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </h3>
+            <p style="margin-top: 1rem; color: var(--fg-muted); display: none;">We support PDF, DOCX, PNG, JPG, and PPTX files for most services.</p>
+          </div>
+          <div class="glass-card fade-up" style="padding: 1.5rem; cursor: pointer;" onclick="this.querySelector('p').style.display = this.querySelector('p').style.display === 'none' ? 'block' : 'none'">
+            <h3 style="font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center;">
+              Can I request rush printing?
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </h3>
+            <p style="margin-top: 1rem; color: var(--fg-muted); display: none;">Yes, Premium members get priority queueing for rush orders during busy hours.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer style="padding: 4rem 0; border-top: 1px solid var(--border); margin-top: 6rem; background: rgba(0,0,0,0.2);">
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 2rem;">
+      <div>
+        <img src="asssets/Icons/PrintUrge_Logo.svg" alt="PrintUrge" class="brand-logo" style="margin-bottom: 1rem; opacity: 0.8;"/>
+        <p style="color: var(--fg-muted); font-size: 0.9rem;">The future of digital printing services.</p>
+      </div>
+      <p style="color: var(--fg-muted); font-size: 0.8rem;">&copy; 2026 PrintUrge. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Header Scroll Effect
+    const header = document.getElementById('main-header');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 50) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+    });
+
+    // Intersection Observer for fade-up animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.animationPlayState = 'running';
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-up').forEach(el => {
+      el.style.animationPlayState = 'paused';
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>

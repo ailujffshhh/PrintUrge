@@ -464,6 +464,8 @@ const initGoogleAuth = () => {
 
 /* ── Service Card Filter ─────────────────────────────────────────── */
 const initServiceFilter = () => {
+  if (document.getElementById("slideshow-track")) return;
+
   const filterButtons = document.querySelectorAll("[data-service-filter]");
   const serviceCards  = document.querySelectorAll(".service-card");
 
@@ -488,6 +490,79 @@ const initServiceFilter = () => {
 };
 
 /* ── Footer Year ─────────────────────────────────────────────────── */
+const prefersReducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const initScrollReveal = () => {
+  const targets = document.querySelectorAll([
+    ".section",
+    ".section-intro",
+    ".hero-copy",
+    ".hero-panel",
+    ".track-order-hero-btn",
+    ".membership-card",
+    ".service-card",
+    ".step-card",
+    ".faq-list details",
+    ".service-highlight",
+    ".service-meta",
+    ".service-cta-card",
+    ".profile-card",
+    ".track-card"
+  ].join(","));
+
+  if (!targets.length) return;
+
+  document.body.classList.add("motion-ready");
+
+  if (prefersReducedMotion() || !("IntersectionObserver" in window)) {
+    targets.forEach((target) => target.classList.add("is-revealed"));
+    return;
+  }
+
+  targets.forEach((target, index) => {
+    target.classList.add("reveal-in");
+    target.style.setProperty("--reveal-delay", `${Math.min(index % 6, 5) * 45}ms`);
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add("is-revealed");
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: 0.14, rootMargin: "0px 0px -8% 0px" });
+
+  targets.forEach((target) => observer.observe(target));
+};
+
+const initSmoothFaq = () => {
+  if (prefersReducedMotion()) return;
+
+  document.querySelectorAll(".faq-list details").forEach((details) => {
+    const summary = details.querySelector("summary");
+    if (!summary) return;
+
+    details.classList.add("faq-motion");
+
+    summary.addEventListener("click", (event) => {
+      event.preventDefault();
+
+      if (details.classList.contains("is-closing")) return;
+
+      if (details.open) {
+        details.classList.add("is-closing");
+        window.setTimeout(() => {
+          details.open = false;
+          details.classList.remove("is-closing");
+        }, 260);
+      } else {
+        details.open = true;
+      }
+    });
+  });
+};
+
 const initHeroScrollCue = () => {
   const cue = document.querySelector(".hero-scroll-down");
   if (!cue) return;
@@ -514,6 +589,8 @@ const runApp = async () => {
   initAuthModal();
   initGoogleAuth();
   initServiceFilter();
+  initScrollReveal();
+  initSmoothFaq();
   initHeroScrollCue();
   updateYear();
 };
@@ -565,6 +642,8 @@ if (document.readyState === "loading") {
   }
 
   function render() {
+    track.classList.add("is-filter-changing");
+
     var vis   = visible();
     var pp    = getPerPage();
     var pages = Math.max(1, Math.ceil(vis.length / pp));
@@ -586,6 +665,11 @@ if (document.readyState === "loading") {
     buildDots(pages);
     btnPrev.disabled = currentPage === 0;
     btnNext.disabled = currentPage >= pages - 1;
+
+    clearTimeout(track._filterTimer);
+    track._filterTimer = setTimeout(function () {
+      track.classList.remove("is-filter-changing");
+    }, 260);
   }
 
   function goTo(page) { currentPage = page; render(); }

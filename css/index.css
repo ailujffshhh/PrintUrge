@@ -1879,3 +1879,211 @@ ul {
     color: var(--muted);
     font-size: 0.9rem;
 }
+
+/* Motion polish */
+body.home-page main {
+    animation: page-enter 0.55s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+@keyframes page-enter {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.motion-ready .reveal-in {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+        opacity 0.55s cubic-bezier(.2, .8, .2, 1),
+        transform 0.55s cubic-bezier(.2, .8, .2, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+    will-change: opacity, transform;
+}
+
+.motion-ready .reveal-in.is-revealed {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.btn,
+.membership-card-cta,
+.track-order-hero-btn,
+.filter-btn,
+.auth-google-btn,
+.modal-close,
+.btn-confirm,
+.slider-controls button,
+.slideshow-arrow {
+    transition:
+        color 0.22s ease,
+        background-color 0.22s ease,
+        border-color 0.22s ease,
+        box-shadow 0.24s ease,
+        opacity 0.22s ease,
+        filter 0.22s ease,
+        transform 0.24s cubic-bezier(.2, .8, .2, 1);
+}
+
+.btn:hover,
+.membership-card-cta:hover,
+.btn-confirm:hover {
+    transform: translateY(-2px);
+}
+
+.btn:active,
+.membership-card-cta:active,
+.track-order-hero-btn:active,
+.filter-btn:active,
+.btn-confirm:active {
+    transform: translateY(0);
+}
+
+.btn-primary:hover,
+.membership-card-cta:hover {
+    filter: brightness(1.04);
+    box-shadow: 0 14px 24px rgba(1, 199, 221, .34);
+}
+
+.card,
+.service-card,
+.step-card,
+.membership-card,
+.upload-card {
+    transition:
+        border-color 0.24s ease,
+        box-shadow 0.28s ease,
+        transform 0.28s cubic-bezier(.2, .8, .2, 1),
+        opacity 0.26s ease;
+}
+
+.service-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 38px rgba(11, 24, 63, .13);
+}
+
+.slideshow-track .service-card {
+    transition:
+        opacity 0.24s ease,
+        transform 0.24s cubic-bezier(.2, .8, .2, 1),
+        box-shadow 0.28s ease,
+        border-color 0.24s ease,
+        flex-basis 0.28s ease,
+        min-height 0.28s ease,
+        padding 0.28s ease;
+}
+
+.field select,
+.field input,
+.field textarea,
+.drop-zone,
+.payment-qr-wrap {
+    transition:
+        border-color 0.22s ease,
+        background-color 0.22s ease,
+        box-shadow 0.24s ease,
+        transform 0.24s cubic-bezier(.2, .8, .2, 1);
+}
+
+.field:focus-within select,
+.field:focus-within input,
+.field:focus-within textarea {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(1, 199, 221, .12);
+}
+
+.drop-zone:hover,
+.drop-zone:focus-within {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(16, 49, 119, .1);
+}
+
+.faq-list details {
+    overflow: hidden;
+}
+
+.faq-list details.faq-motion p {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-4px);
+    overflow: hidden;
+    transition:
+        max-height 0.26s ease,
+        opacity 0.22s ease,
+        margin-top 0.22s ease,
+        transform 0.26s ease;
+}
+
+.faq-list details.faq-motion[open] p {
+    max-height: 12rem;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.faq-list details.faq-motion.is-closing p {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+    transform: translateY(-4px);
+}
+
+.slideshow-track.is-filter-changing .service-card {
+    transition-duration: 0.32s;
+}
+
+.service-card.is-filtered-out {
+    opacity: 0;
+    transform: scale(.94);
+    transition:
+        opacity 0.24s ease,
+        transform 0.24s ease,
+        flex-basis 0.28s ease,
+        min-height 0.28s ease,
+        padding 0.28s ease,
+        border-color 0.2s ease;
+}
+
+@media(max-width:920px) {
+    .nav-menu {
+        transition:
+            transform 0.34s cubic-bezier(.2, .8, .2, 1),
+            opacity 0.24s ease,
+            visibility 0s linear 0.34s;
+        will-change: transform, opacity;
+    }
+
+    .nav-menu.is-open {
+        transition:
+            transform 0.34s cubic-bezier(.2, .8, .2, 1),
+            opacity 0.24s ease,
+            visibility 0s linear 0s;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.001ms !important;
+        transition-delay: 0ms !important;
+    }
+
+    body.home-page main,
+    .motion-ready .reveal-in {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}
