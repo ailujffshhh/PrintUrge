@@ -2161,6 +2161,37 @@ ul {
 	font-weight: 700;
 }
 
+.profile-tier-banner {
+	display: grid;
+	gap: 0.25rem;
+	margin-bottom: 0.85rem;
+	padding: 0.85rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	background: var(--surface-alt);
+}
+
+.profile-tier-banner.is-member {
+	background: #e5fbef;
+	border-color: #aee8c6;
+}
+
+.profile-tier-banner strong {
+	font-family: var(--font-heading);
+}
+
+.profile-tier-banner span {
+	color: var(--muted);
+}
+
+.profile-benefit-list {
+	display: grid;
+	gap: 0.45rem;
+	list-style: disc;
+	padding-left: 1.1rem;
+	color: var(--ink-soft);
+}
+
 .profile-history-head,
 .profile-order,
 .profile-order-meta {

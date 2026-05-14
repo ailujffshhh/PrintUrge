@@ -95,7 +95,7 @@ function ensure_database_schema(PDO $pdo): void
     }
 
     $schemaTtl = printurge_schema_cache_ttl();
-    $schemaCacheKey = 'pgsql_schema_ready:v2';
+    $schemaCacheKey = 'pgsql_schema_ready:v3';
     if ($schemaTtl > 0 && printurge_cache_get($schemaCacheKey) !== null) {
         $done = true;
         return;
@@ -124,6 +124,8 @@ function ensure_database_schema(PDO $pdo): void
           email VARCHAR(255) NOT NULL UNIQUE,
           password_hash VARCHAR(255) NOT NULL,
           status VARCHAR(20) NOT NULL DEFAULT 'active',
+          account_tier VARCHAR(20) NOT NULL DEFAULT 'free',
+          member_since TIMESTAMPTZ NULL,
           archived_at TIMESTAMPTZ NULL,
           last_login_at TIMESTAMPTZ NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -135,6 +137,8 @@ function ensure_database_schema(PDO $pdo): void
     $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)");
     $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)");
     $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active'");
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS account_tier VARCHAR(20) NOT NULL DEFAULT 'free'");
+    $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS member_since TIMESTAMPTZ NULL");
     $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ NULL");
     $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ NULL");
     $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email ON users (email)");
@@ -158,6 +162,13 @@ function ensure_database_schema(PDO $pdo): void
           custom_height VARCHAR(32) NULL,
           files_json JSONB NOT NULL,
           admin_notes TEXT NULL,
+          subtotal_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+          discount_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+          credits_applied NUMERIC(10,2) NOT NULL DEFAULT 0,
+          total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+          is_priority BOOLEAN NOT NULL DEFAULT FALSE,
+          pickup_slot_id BIGINT NULL,
+          preset_id BIGINT NULL,
           status VARCHAR(20) NOT NULL DEFAULT 'active',
           archived_at TIMESTAMPTZ NULL,
           completed_at TIMESTAMPTZ NULL,
@@ -170,6 +181,13 @@ function ensure_database_schema(PDO $pdo): void
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS customer_notes TEXT NULL");
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS payment_method VARCHAR(80) NULL");
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid'");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS subtotal_amount NUMERIC(10,2) NOT NULL DEFAULT 0");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(10,2) NOT NULL DEFAULT 0");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS credits_applied NUMERIC(10,2) NOT NULL DEFAULT 0");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS total_amount NUMERIC(10,2) NOT NULL DEFAULT 0");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS is_priority BOOLEAN NOT NULL DEFAULT FALSE");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS pickup_slot_id BIGINT NULL");
+    $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS preset_id BIGINT NULL");
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ NULL");
     $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_print_requests_transaction_id ON print_requests(transaction_id)");
     $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_requests_user_id ON print_requests(user_id)");
@@ -197,6 +215,81 @@ function ensure_database_schema(PDO $pdo): void
     $pdo->exec("ALTER TABLE print_requests ADD COLUMN IF NOT EXISTS order_status VARCHAR(32) NOT NULL DEFAULT 'submitted'");
     $pdo->exec('ALTER TABLE print_requests DROP CONSTRAINT IF EXISTS print_requests_payment_status_check');
     $pdo->exec("ALTER TABLE print_requests ADD CONSTRAINT print_requests_payment_status_check CHECK (payment_status IN ('unpaid', 'pending_review', 'paid'))");
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS subscriptions (
+          id BIGSERIAL PRIMARY KEY,
+          user_id BIGINT NOT NULL,
+          provider VARCHAR(40) NOT NULL DEFAULT 'manual',
+          provider_customer_id VARCHAR(160) NULL,
+          provider_subscription_id VARCHAR(160) NULL,
+          status VARCHAR(32) NOT NULL DEFAULT 'incomplete',
+          plan_key VARCHAR(80) NOT NULL DEFAULT 'printurge_member',
+          current_period_start TIMESTAMPTZ NULL,
+          current_period_end TIMESTAMPTZ NULL,
+          cancel_at TIMESTAMPTZ NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status)");
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS member_credits (
+          id BIGSERIAL PRIMARY KEY,
+          user_id BIGINT NOT NULL,
+          period_month VARCHAR(7) NOT NULL,
+          starting_credits NUMERIC(10,2) NOT NULL DEFAULT 0,
+          used_credits NUMERIC(10,2) NOT NULL DEFAULT 0,
+          remaining_credits NUMERIC(10,2) NOT NULL DEFAULT 0,
+          expires_at TIMESTAMPTZ NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_member_credits_period ON member_credits(user_id, period_month)");
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS member_benefits (
+          id BIGSERIAL PRIMARY KEY,
+          user_id BIGINT NOT NULL,
+          benefit_key VARCHAR(80) NOT NULL,
+          period_month VARCHAR(7) NOT NULL,
+          used_count INT NOT NULL DEFAULT 0,
+          limit_count INT NOT NULL DEFAULT 1,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_member_benefits_period ON member_benefits(user_id, benefit_key, period_month)");
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS print_presets (
+          id BIGSERIAL PRIMARY KEY,
+          user_id BIGINT NOT NULL,
+          name VARCHAR(120) NOT NULL,
+          service VARCHAR(64) NOT NULL,
+          color_mode VARCHAR(64) NULL,
+          size_key VARCHAR(64) NULL,
+          copies INT NOT NULL DEFAULT 1,
+          pages INT NOT NULL DEFAULT 1,
+          custom_width VARCHAR(32) NULL,
+          custom_height VARCHAR(32) NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_print_presets_user_id ON print_presets(user_id)");
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS pickup_slots (
+          id BIGSERIAL PRIMARY KEY,
+          print_request_id BIGINT NULL,
+          user_id BIGINT NOT NULL,
+          pickup_date DATE NOT NULL,
+          time_window VARCHAR(80) NOT NULL,
+          status VARCHAR(24) NOT NULL DEFAULT 'booked',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_pickup_slots_user_id ON pickup_slots(user_id)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_pickup_slots_request_id ON pickup_slots(print_request_id)");
 
     if ($schemaTtl > 0) {
         printurge_cache_set($schemaCacheKey, 1, $schemaTtl);
@@ -301,7 +394,7 @@ function load_user_context(PDO $pdo, $userId)
     }
 
     $stmt = $pdo->prepare(
-        'SELECT u.id, u.name, u.email, u.status, u.archived_at, r.name AS role
+        'SELECT u.id, u.name, u.email, u.status, u.account_tier, u.member_since, u.archived_at, r.name AS role
          FROM users u
          JOIN roles r ON r.id = u.role_id
          WHERE u.id = ?
@@ -328,6 +421,8 @@ function map_user(array $row): array
         'email' => $row['email'],
         'role' => $row['role'],
         'status' => $row['status'],
+        'account_tier' => $row['account_tier'] ?? 'free',
+        'member_since' => $row['member_since'] ?? null,
     ];
 }
 
@@ -419,11 +514,16 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
 
     $auth = current_auth();
     $userId = $forceUserId;
+    $requestUser = null;
     if ($forceUserId === null && $attachUploader && $auth && !empty($auth['sub'])) {
         $user = load_user_context($pdo, (int)$auth['sub']);
         if ($user && $user['status'] === 'active' && empty($user['archived_at'])) {
             $userId = (int)$user['id'];
+            $requestUser = $user;
         }
+    }
+    if ($requestUser === null && $userId) {
+        $requestUser = load_user_context($pdo, (int)$userId);
     }
 
     $customerEmail = strtolower(trim((string)($_POST['customerEmail'] ?? $_POST['customer_email'] ?? '')));
@@ -452,9 +552,6 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
     $customerName = trim((string)($_POST['customerName'] ?? $_POST['customer_name'] ?? ''));
     $customerNotes = trim((string)($_POST['customerNotes'] ?? $_POST['customer_notes'] ?? ''));
     $paymentMethod = trim((string)($_POST['paymentMethod'] ?? $_POST['payment_method'] ?? ''));
-    if ($attachUploader && strtolower($paymentMethod) === 'bank_qr' && !$userId) {
-        json_response(['error' => 'Bank QR Transfer is available for signed-in accounts only'], 403);
-    }
     $requestedPayment = strtolower(trim((string)($_POST['paymentStatus'] ?? $_POST['payment_status'] ?? 'unpaid')));
     $paymentStatus = printurge_normalize_payment_status_for_create(
         $requestedPayment,
@@ -471,13 +568,31 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
     }
 
     $customerEmailDb = $customerEmail !== '' ? substr($customerEmail, 0, 255) : null;
+    $copiesValue = int_field($_POST['copies'] ?? 1, 1);
+    $pagesValue = int_field($_POST['pages'] ?? 1, 1);
+    $quantityUnits = max(1, $copiesValue * $pagesValue);
+    $subtotalAmount = (float)($_POST['subtotalAmount'] ?? 0);
+    if ($subtotalAmount <= 0) {
+        $subtotalAmount = round($quantityUnits * 2.00, 2);
+    }
+    $accountTier = strtolower((string)($requestUser['account_tier'] ?? 'free'));
+    $isMember = $accountTier === 'member';
+    $discountAmount = 0.0;
+    if ($isMember && $quantityUnits >= 100) {
+        $discountAmount = round($subtotalAmount * 0.10, 2);
+    }
+    $creditsApplied = 0.0;
+    $totalAmount = max(0, round($subtotalAmount - $discountAmount - $creditsApplied, 2));
+    $isPriority = $isMember ? 1 : 0;
+    $presetId = int_field($_POST['presetId'] ?? 0, 0);
+    $pickupSlotId = int_field($_POST['pickupSlotId'] ?? 0, 0);
 
     $filesJson = json_encode($metadata, JSON_UNESCAPED_SLASHES);
     $driver = db_driver($pdo);
     $filesPlaceholder = $driver === 'pgsql' ? '?::jsonb' : '?';
     $sql = 'INSERT INTO print_requests
-        (transaction_id, user_id, customer_name, customer_email, customer_notes, payment_method, payment_status, order_status, service, color_mode, size_key, copies, pages, custom_width, custom_height, files_json, admin_notes, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ' . $filesPlaceholder . ', NULL, ?)';
+        (transaction_id, user_id, customer_name, customer_email, customer_notes, payment_method, payment_status, order_status, service, color_mode, size_key, copies, pages, custom_width, custom_height, files_json, admin_notes, subtotal_amount, discount_amount, credits_applied, total_amount, is_priority, pickup_slot_id, preset_id, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ' . $filesPlaceholder . ', NULL, ?, ?, ?, ?, ?, ?, ?, ?)';
     $params = [
         $transactionId,
         $userId,
@@ -490,11 +605,18 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
         $service,
         substr(trim((string)($_POST['colorMode'] ?? '')), 0, 64) ?: null,
         substr(trim((string)($_POST['size'] ?? '')), 0, 64) ?: null,
-        int_field($_POST['copies'] ?? 1, 1),
-        int_field($_POST['pages'] ?? 1, 1),
+        $copiesValue,
+        $pagesValue,
         trim((string)($_POST['customWidth'] ?? '')) !== '' ? substr(trim((string)$_POST['customWidth']), 0, 32) : null,
         trim((string)($_POST['customHeight'] ?? '')) !== '' ? substr(trim((string)$_POST['customHeight']), 0, 32) : null,
         $filesJson,
+        number_format($subtotalAmount, 2, '.', ''),
+        number_format($discountAmount, 2, '.', ''),
+        number_format($creditsApplied, 2, '.', ''),
+        number_format($totalAmount, 2, '.', ''),
+        $isPriority,
+        $pickupSlotId > 0 ? $pickupSlotId : null,
+        $presetId > 0 ? $presetId : null,
         'active',
     ];
 

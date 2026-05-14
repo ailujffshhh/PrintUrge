@@ -33,6 +33,7 @@ const sharedPartials = {
     <div class="nav-menu" id="site-menu">
       <nav class="site-nav" aria-label="Primary navigation">
         <a href="{{base}}index.html#services">Services</a>
+        <a href="{{base}}index.html#membership">Membership</a>
         <a href="{{base}}index.html#how-it-works">How It Works</a>
         <a href="{{base}}index.html#faq">FAQ</a>
         <a href="{{base}}pages/track-order.html">Track order</a>
@@ -165,9 +166,14 @@ const refreshAuthNav = () => {
       session.user.role === "admin" || session.user.role === "staff"
         ? `<a href="${basePath}pages/admin.html" class="btn btn-outline">Admin</a>`
         : "";
+    const memberBadge =
+      session.user.account_tier === "member"
+        ? `<span class="admin-marker is-paid">Member</span>`
+        : "";
     wrap.innerHTML = `
       ${adminBtn}
       <a href="${basePath}pages/profile.html" class="btn btn-outline">Profile</a>
+      ${memberBadge}
       <span class="nav-user-label">${escapeHtml(session.user.name)}</span>
       <button type="button" class="btn btn-primary" data-auth-logout>Log out</button>
     `;

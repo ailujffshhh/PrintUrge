@@ -66,7 +66,8 @@ try {
             "SELECT pr.id, pr.transaction_id, pr.service, pr.status, pr.payment_status, pr.payment_method,
                     pr.customer_name, pr.customer_email, pr.order_status, pr.created_at, pr.archived_at, pr.completed_at,
                     pr.copies, pr.pages, pr.color_mode, pr.size_key, pr.customer_notes, pr.admin_notes,
-                    u.name AS user_name, u.email AS user_email
+                    pr.subtotal_amount, pr.discount_amount, pr.credits_applied, pr.total_amount, pr.is_priority,
+                    u.name AS user_name, u.email AS user_email, u.account_tier AS user_tier
              FROM print_requests pr
              LEFT JOIN users u ON u.id = pr.user_id
              {$where}
@@ -92,7 +93,7 @@ try {
             }
         }
         $stmt = $pdo->prepare(
-            'SELECT pr.*, u.name AS user_name, u.email AS user_email
+            'SELECT pr.*, u.name AS user_name, u.email AS user_email, u.account_tier AS user_tier
              FROM print_requests pr
              LEFT JOIN users u ON u.id = pr.user_id
              WHERE pr.id = ?

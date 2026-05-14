@@ -246,6 +246,37 @@
   // Run once on load
   updateService();
 
+  function applyReorderSettings() {
+    var raw = null;
+    try {
+      raw = sessionStorage.getItem("printurge_reorder_settings");
+      sessionStorage.removeItem("printurge_reorder_settings");
+    } catch (_) {}
+    if (!raw) return;
+    var settings;
+    try {
+      settings = JSON.parse(raw);
+    } catch (_) {
+      return;
+    }
+    if (settings.service && SERVICE_CONFIG[settings.service]) {
+      serviceType.value = settings.service;
+      updateService();
+    }
+    if (settings.color_mode || settings.colorMode) colorMode.value = settings.color_mode || settings.colorMode;
+    if (settings.size_key || settings.size) {
+      paperSize.value = settings.size_key || settings.size;
+      updateCustomSlot();
+    }
+    if (settings.copies) copies.value = settings.copies;
+    if (settings.pages) pages.value = settings.pages;
+    if (settings.custom_width || settings.customWidth) customWidth.value = settings.custom_width || settings.customWidth;
+    if (settings.custom_height || settings.customHeight) customHeight.value = settings.custom_height || settings.customHeight;
+    notify("Past order settings loaded. Add the files you want to print again.", "success");
+  }
+
+  applyReorderSettings();
+
   function serviceLabel(value) {
     if (serviceKeyIsSelect) {
       var opt = serviceType.querySelector('option[value="' + value + '"]');
@@ -771,7 +802,7 @@
       '<label class="field"><span>Name</span><input type="text" name="customerName" required autocomplete="name"></label>' +
       '<label class="field"><span>Email</span><input type="email" name="customerEmail" required autocomplete="email" placeholder="For e-receipt and order tracking"></label>' +
       '<label class="field"><span>Notes</span><textarea name="customerNotes" rows="3" placeholder="Paper instructions, pickup notes, or contact details"></textarea></label>' +
-      '<label class="field"><span>Payment method</span><select name="paymentMethod" required><option value="cash" selected>Cash on pickup</option><option value="bank_qr" data-account-only>Bank QR Transfer</option></select></label>' +
+      '<label class="field"><span>Payment method</span><select name="paymentMethod" required><option value="cash" selected>Cash on pickup</option><option value="ewallet">E-wallet transfer</option><option value="bank_transfer">Bank transfer</option></select></label>' +
       '<button type="button" class="btn btn-primary full-width" id="payment-details-continue">Continue</button>' +
       '</div>' +
       '<div class="payment-step" id="payment-cash-confirm-step">' +
@@ -803,13 +834,7 @@
         notify("Please enter a valid email for your receipt and order tracking.", "error");
         return;
       }
-      var pm = details.paymentMethod;
-      if (pm === "bank_qr" && !isSignedIn()) {
-        notify("Bank QR Transfer is available for signed-in accounts only.", "error");
-        syncPaymentMethodLock();
-        return;
-      }
-      if (pm === "cash") {
+      if (details.paymentMethod === "cash") {
         updateCashConfirmSummary();
         showPaymentStep("cashConfirm");
         return;
@@ -855,17 +880,7 @@
   function syncPaymentMethodLock() {
     var modal = ensurePaymentModal();
     var select = modal.querySelector('[name="paymentMethod"]');
-    var bankOption = modal.querySelector('[name="paymentMethod"] option[value="bank_qr"]');
-    if (!select || !bankOption) return;
-
-    var locked = !isSignedIn();
-    bankOption.disabled = locked;
-    bankOption.textContent = locked
-      ? "Bank QR Transfer (accounts only)"
-      : "Bank QR Transfer";
-    if (locked && select.value === "bank_qr") {
-      select.value = "cash";
-    }
+    if (!select) return;
   }
 
   function prefillCheckoutIdentity() {

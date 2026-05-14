@@ -91,6 +91,8 @@
     if (hasText(item.customer_notes)) markers.push('<span class="admin-marker is-note">Customer note</span>');
     if (hasText(item.admin_notes)) markers.push('<span class="admin-marker is-admin-note">Admin note</span>');
     if (item.payment_status === "paid") markers.push('<span class="admin-marker is-paid">Paid</span>');
+    if ((item.user_tier || item.account_tier) === "member") markers.push('<span class="admin-marker is-paid">Member</span>');
+    if (item.is_priority === true || item.is_priority === 1 || item.is_priority === "1") markers.push('<span class="admin-marker is-new">Priority</span>');
     return markers.join("");
   }
 

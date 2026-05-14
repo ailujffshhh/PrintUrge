@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')),
+  account_tier VARCHAR(20) NOT NULL DEFAULT 'free',
+  member_since TIMESTAMPTZ NULL,
   archived_at TIMESTAMPTZ NULL,
   last_login_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -49,6 +51,13 @@ CREATE TABLE IF NOT EXISTS print_requests (
   custom_height VARCHAR(32) NULL,
   files_json JSONB NOT NULL,
   admin_notes TEXT NULL,
+  subtotal_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  discount_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  credits_applied NUMERIC(10,2) NOT NULL DEFAULT 0,
+  total_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  is_priority BOOLEAN NOT NULL DEFAULT FALSE,
+  pickup_slot_id BIGINT NULL,
+  preset_id BIGINT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
   archived_at TIMESTAMPTZ NULL,
   completed_at TIMESTAMPTZ NULL,
@@ -76,3 +85,76 @@ CREATE TABLE IF NOT EXISTS print_request_files (
 
 CREATE INDEX IF NOT EXISTS idx_print_request_files_request_id ON print_request_files(print_request_id);
 CREATE INDEX IF NOT EXISTS idx_print_request_files_stored_name ON print_request_files(stored_name);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider VARCHAR(40) NOT NULL DEFAULT 'manual',
+  provider_customer_id VARCHAR(160) NULL,
+  provider_subscription_id VARCHAR(160) NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'incomplete',
+  plan_key VARCHAR(80) NOT NULL DEFAULT 'printurge_member',
+  current_period_start TIMESTAMPTZ NULL,
+  current_period_end TIMESTAMPTZ NULL,
+  cancel_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+
+CREATE TABLE IF NOT EXISTS member_credits (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  period_month VARCHAR(7) NOT NULL,
+  starting_credits NUMERIC(10,2) NOT NULL DEFAULT 0,
+  used_credits NUMERIC(10,2) NOT NULL DEFAULT 0,
+  remaining_credits NUMERIC(10,2) NOT NULL DEFAULT 0,
+  expires_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, period_month)
+);
+
+CREATE TABLE IF NOT EXISTS member_benefits (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  benefit_key VARCHAR(80) NOT NULL,
+  period_month VARCHAR(7) NOT NULL,
+  used_count INT NOT NULL DEFAULT 0,
+  limit_count INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, benefit_key, period_month)
+);
+
+CREATE TABLE IF NOT EXISTS print_presets (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(120) NOT NULL,
+  service VARCHAR(64) NOT NULL,
+  color_mode VARCHAR(64) NULL,
+  size_key VARCHAR(64) NULL,
+  copies INT NOT NULL DEFAULT 1,
+  pages INT NOT NULL DEFAULT 1,
+  custom_width VARCHAR(32) NULL,
+  custom_height VARCHAR(32) NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_print_presets_user_id ON print_presets(user_id);
+
+CREATE TABLE IF NOT EXISTS pickup_slots (
+  id BIGSERIAL PRIMARY KEY,
+  print_request_id BIGINT NULL REFERENCES print_requests(id) ON DELETE SET NULL,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  pickup_date DATE NOT NULL,
+  time_window VARCHAR(80) NOT NULL,
+  status VARCHAR(24) NOT NULL DEFAULT 'booked',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_pickup_slots_user_id ON pickup_slots(user_id);
+CREATE INDEX IF NOT EXISTS idx_pickup_slots_request_id ON pickup_slots(print_request_id);
