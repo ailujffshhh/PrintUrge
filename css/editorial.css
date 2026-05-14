@@ -1,0 +1,249 @@
+/* Editorial Redesign CSS */
+:root {
+  --bg:      oklch(98% 0.004 95);
+  --surface: oklch(100% 0.002 95);
+  --fg:      oklch(15% 0.01 70);
+  --muted:   oklch(45% 0.015 70);
+  --border:  oklch(90% 0.006 95);
+  --accent:  oklch(35% 0.05 40);
+
+  --font-display: "Charter", "Iowan Old Style", "Times New Roman", Georgia, serif;
+  --font-body:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-mono:    ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, monospace;
+
+  --container-max: 1200px;
+  --gutter: 2rem;
+  --section-spacing: 10rem;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .serif {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+/* Layout Parts */
+.site-header {
+  padding: 2rem 0;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 100;
+}
+
+.nav-shell {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brand-logo {
+  height: 24px;
+  filter: grayscale(1) contrast(1.2);
+}
+
+.nav-links {
+  display: flex;
+  gap: 3rem;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: var(--fg);
+  font-size: 0.9rem;
+  transition: color 0.3s;
+}
+
+.nav-links a:hover {
+  color: var(--accent);
+}
+
+/* Hero */
+.hero {
+  padding: 8rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: start;
+}
+
+.hero h1 {
+  font-size: clamp(3rem, 8vw, 6rem);
+  margin-bottom: 2rem;
+}
+
+.hero-meta {
+  border-top: 1px solid var(--fg);
+  padding-top: 1rem;
+  margin-top: 2rem;
+}
+
+/* Editorial Block */
+.editorial-section {
+  padding: var(--section-spacing) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.asymmetric-grid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 4rem;
+}
+
+.section-label {
+  position: sticky;
+  top: 8rem;
+}
+
+.editorial-content h2 {
+  font-size: 3.5rem;
+  margin-bottom: 3rem;
+}
+
+.editorial-content p {
+  font-size: 1.25rem;
+  max-width: 45ch;
+  margin-bottom: 2rem;
+  color: var(--muted);
+}
+
+.editorial-content p.lead {
+  color: var(--fg);
+  font-size: 1.75rem;
+}
+
+/* Services */
+.services-list {
+  display: grid;
+  gap: 2rem;
+}
+
+.service-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 2rem;
+  align-items: center;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: var(--fg);
+  transition: padding 0.4s ease;
+}
+
+.service-item:hover {
+  padding-left: 1rem;
+  border-bottom-color: var(--fg);
+}
+
+.service-item h3 {
+  font-size: 1.5rem;
+}
+
+.service-item .service-desc {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Process */
+.process-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+}
+
+.step {
+  border-top: 1px solid var(--fg);
+  padding-top: 1rem;
+}
+
+.step-num {
+  font-family: var(--font-mono);
+  display: block;
+  margin-bottom: 1rem;
+}
+
+/* Forms - Keeping them minimal */
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--fg);
+  background: none;
+  color: var(--fg);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+  transition: all 0.3s;
+}
+
+.btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.btn-primary {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.btn-primary:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Animations */
+.fade-up {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 1.2s ease, transform 1.2s ease;
+}
+
+.fade-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .hero-grid, .asymmetric-grid, .process-steps {
+    grid-template-columns: 1fr;
+  }
+  .section-label {
+    position: static;
+    margin-bottom: 2rem;
+  }
+}

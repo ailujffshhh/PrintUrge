@@ -1,0 +1,9 @@
+- [x] 1. Read active DESIGN.md + skill assets (template.html, layouts.md, checklist.md)
+- [x] 2. Codify `brand-spec-editorial.md` with Warm Paper & Ink palette + Serif typography
+- [x] 3. Plan section rhythm for Editorial landing (Hero, Brief, Services, Membership, Process, FAQ)
+- [x] 4. Create `index-editorial.html` as the new canonical entry point
+- [x] 5. Implement layout with generous whitespace and magazine-style grids
+- [x] 6. Integrate subtle & slow animations (fluid fades, staggered entrances)
+- [x] 7. Self-check: run references/checklist.md
+- [x] 8. Critique: 5-dim radar (Editorial-specific check)
+- [x] 9. Emit <artifact> for `index-editorial.html`

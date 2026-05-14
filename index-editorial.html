@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PrintUrge — The Editorial Edition</title>
+  <link rel="stylesheet" href="css/editorial.css"/>
+  <style>
+    /* Inline specific adjustments for this page */
+    .hero-image-placeholder {
+      aspect-ratio: 4/5;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-image-placeholder::after {
+      content: "PREMIUM OUTPUT";
+      position: absolute;
+      bottom: 2rem;
+      left: 2rem;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+    }
+
+    /* Minimal Quick Print for Editorial */
+    .minimal-form {
+      padding: 4rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .minimal-form h3 {
+      font-size: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .input-group label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+    }
+
+    .input-group input, .input-group select {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--fg);
+      padding: 0.5rem 0;
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      outline: none;
+    }
+
+    .drop-area {
+      border: 1px dashed var(--muted);
+      padding: 3rem;
+      text-align: center;
+      margin-bottom: 2rem;
+      font-family: var(--font-display);
+      font-style: italic;
+    }
+
+    .membership-promo {
+      background: var(--fg);
+      color: var(--bg);
+      padding: 6rem;
+      text-align: center;
+    }
+
+    .membership-promo h2 {
+      font-size: 4rem;
+      margin-bottom: 2rem;
+    }
+
+    .membership-promo p {
+      font-size: 1.5rem;
+      max-width: 30ch;
+      margin: 0 auto 3rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container nav-shell">
+      <a href="#" class="brand">
+        <img src="asssets/Icons/PrintUrge_Logo.svg" alt="PrintUrge" class="brand-logo"/>
+      </a>
+      <nav class="nav-links">
+        <a href="#services">The Catalog</a>
+        <a href="#membership">Membership</a>
+        <a href="#process">The Method</a>
+        <a href="pages/track-order.html">Order Status</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="btn">Log In</button>
+        <button class="btn btn-primary">Join</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero fade-up">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <span class="mono">Issue No. 01 — The Print Issue</span>
+          <h1>A New Standard for Local Printing.</h1>
+          <p class="lead">PrintUrge is a boutique management system designed for those who value precision, speed, and the tactile quality of a perfect print.</p>
+          <div class="hero-meta">
+            <span class="mono">Est. 2026 — Designed for the Creative Class</span>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-image-placeholder"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THE BRIEF -->
+    <section class="editorial-section fade-up">
+      <div class="container asymmetric-grid">
+        <div class="section-label">
+          <span class="mono">The Brief</span>
+        </div>
+        <div class="editorial-content">
+          <h2>Why PrintUrge?</h2>
+          <p class="lead">We believe that every document, poster, and manual tells a story. Our platform ensures that story is told with clarity and elegance.</p>
+          <p>Born from the needs of students and professionals, PrintUrge bridge the gap between digital submission and physical output. No queues, no guesswork—just the highest standard of print production delivered through a seamless, editorial-first experience.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUICK PRINT -->
+    <section class="editorial-section fade-up" id="quick-print">
+      <div class="container asymmetric-grid">
+        <div class="section-label">
+          <span class="mono">The Submission</span>
+        </div>
+        <div class="editorial-content">
+          <div class="minimal-form">
+            <h3>Quick Submission</h3>
+            <div class="drop-area">
+              Drag your files here or click to browse
+            </div>
+            <div class="form-row">
+              <div class="input-group">
+                <label>Service Type</label>
+                <select>
+                  <option>Document Printing</option>
+                  <option>Photocopying</option>
+                  <option>Lamination</option>
+                </select>
+              </div>
+              <div class="input-group">
+                <label>Color Mode</label>
+                <select>
+                  <option>Black & White</option>
+                  <option>Full Color</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary full-width" style="width: 100%;">Submit for Review</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section class="editorial-section fade-up" id="services">
+      <div class="container asymmetric-grid">
+        <div class="section-label">
+          <span class="mono">The Catalog</span>
+        </div>
+        <div class="editorial-content">
+          <h2>Our Services</h2>
+          <div class="services-list">
+            <a href="pages/services/document-printing.html" class="service-item">
+              <span class="mono">01</span>
+              <h3>Document Printing</h3>
+              <span class="service-desc">Professional reports and academic handouts.</span>
+            </a>
+            <a href="pages/services/poster-printing.html" class="service-item">
+              <span class="mono">02</span>
+              <h3>Poster Printing</h3>
+              <span class="service-desc">Large-format visuals for creative impact.</span>
+            </a>
+            <a href="pages/services/lamination.html" class="service-item">
+              <span class="mono">03</span>
+              <h3>Lamination</h3>
+              <span class="service-desc">Protection for your most valued assets.</span>
+            </a>
+            <a href="pages/services/soft-binding.html" class="service-item">
+              <span class="mono">04</span>
+              <h3>Binding Services</h3>
+              <span class="service-desc">The final touch for a polished presentation.</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MEMBERSHIP -->
+    <section class="fade-up" id="membership">
+      <div class="membership-promo">
+        <span class="mono" style="color: var(--muted)">The Member Society</span>
+        <h2>Elevate Your Experience.</h2>
+        <p>Join our membership society for priority handling, lower bulk rates, and monthly print credits.</p>
+        <button class="btn" style="border-color: var(--bg); color: var(--bg);">Unlock Membership</button>
+      </div>
+    </section>
+
+    <!-- PROCESS -->
+    <section class="editorial-section fade-up" id="process">
+      <div class="container asymmetric-grid">
+        <div class="section-label">
+          <span class="mono">The Method</span>
+        </div>
+        <div class="editorial-content">
+          <div class="process-steps">
+            <div class="step">
+              <span class="step-num">01</span>
+              <h3>Upload</h3>
+              <p>Securely transfer your files to our production queue.</p>
+            </div>
+            <div class="step">
+              <span class="step-num">02</span>
+              <h3>Configure</h3>
+              <p>Specify color, size, and finishing with precision.</p>
+            </div>
+            <div class="step">
+              <span class="step-num">03</span>
+              <h3>Finalize</h3>
+              <p>Complete your payment via our secure digital partner.</p>
+            </div>
+            <div class="step">
+              <span class="step-num">04</span>
+              <h3>Collect</h3>
+              <p>Pick up your order at your designated time, without the wait.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="editorial-section fade-up">
+    <div class="container">
+      <div class="hero-grid">
+        <div>
+          <img src="asssets/Icons/PrintUrge_Logo.svg" alt="PrintUrge" class="brand-logo" style="margin-bottom: 2rem;"/>
+          <p>© 2026 PrintUrge. All rights reserved.</p>
+        </div>
+        <div style="text-align: right;">
+          <span class="mono">Contact</span><br>
+          <a href="#" style="color: var(--fg); text-decoration: none;">studio@printurge.com</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Subtle Intersection Observer for Fade-Up animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>
