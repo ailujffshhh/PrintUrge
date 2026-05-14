@@ -22,6 +22,7 @@
   var btnPaid = document.getElementById("admin-detail-paid");
   var btnRejectReceipt = document.getElementById("admin-detail-reject-receipt");
   var btnUnpaid = document.getElementById("admin-detail-unpaid");
+  var btnComplete = document.getElementById("admin-detail-complete");
 
   if (!gate || !app || !loginForm) return;
 
@@ -282,6 +283,9 @@
       btnRejectReceipt.hidden = item.payment_status !== "pending_review";
     }
     if (btnUnpaid) btnUnpaid.hidden = item.payment_status === "unpaid";
+    if (btnComplete) {
+      btnComplete.hidden = item.order_status === "completed" || item.order_status === "cancelled";
+    }
 
     openDetail();
   }
@@ -377,6 +381,20 @@
       if (selectedId === id) await openRow(id);
     } catch (err) {
       notify(err.message || "Reject failed", "error");
+    } finally {
+      setButtonLoading(sourceBtn, false);
+    }
+  }
+
+  async function completeRequest(id, sourceBtn) {
+    try {
+      setButtonLoading(sourceBtn, true, "Completing...");
+      await api("/api/admin/print-requests/" + encodeURIComponent(id) + "/complete", { method: "POST" });
+      notify("Request marked as completed.", "success");
+      await loadList();
+      if (selectedId === id) await openRow(id);
+    } catch (err) {
+      notify(err.message || "Complete update failed", "error");
     } finally {
       setButtonLoading(sourceBtn, false);
     }
@@ -520,6 +538,11 @@
   if (btnRejectReceipt) {
     btnRejectReceipt.addEventListener("click", function () {
       rejectPaymentProof(Number(detailForm.elements.namedItem("requestId").value), btnRejectReceipt);
+    });
+  }
+  if (btnComplete) {
+    btnComplete.addEventListener("click", function () {
+      completeRequest(Number(detailForm.elements.namedItem("requestId").value), btnComplete);
     });
   }
 

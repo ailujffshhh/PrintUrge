@@ -30,6 +30,8 @@ try {
         if ($status === 'active' || $status === 'archived') {
             $where .= ' AND pr.status = ?';
             $params[] = $status;
+        } elseif ($status === 'history') {
+            $where .= " AND pr.order_status = 'completed'";
         }
         $stmt = $pdo->prepare(
             "SELECT pr.id, pr.transaction_id, pr.service, pr.status, pr.payment_status, pr.payment_method,
@@ -110,7 +112,7 @@ try {
         ], 201);
     }
 
-    if ($method === 'POST' && $id && ($action === 'archive' || $action === 'restore' || $action === 'mark-paid' || $action === 'mark-unpaid' || $action === 'reject-receipt')) {
+    if ($method === 'POST' && $id && ($action === 'archive' || $action === 'restore' || $action === 'mark-paid' || $action === 'mark-unpaid' || $action === 'reject-receipt' || $action === 'complete')) {
         if ($action === 'archive') {
             $stmt = $pdo->prepare("UPDATE print_requests SET status = 'archived', archived_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'active'");
             $message = 'Not found or already archived';
@@ -179,6 +181,15 @@ try {
         }
         if ($action === 'mark-unpaid') {
             $stmt = $pdo->prepare("UPDATE print_requests SET payment_status = 'unpaid' WHERE id = ?");
+            $stmt->execute([$id]);
+            if ($stmt->rowCount() < 1) {
+                json_response(['error' => 'Not found'], 404);
+            }
+            printurge_admin_cache_bump();
+            json_response(['ok' => true]);
+        }
+        if ($action === 'complete') {
+            $stmt = $pdo->prepare("UPDATE print_requests SET order_status = 'completed' WHERE id = ?");
             $stmt->execute([$id]);
             if ($stmt->rowCount() < 1) {
                 json_response(['error' => 'Not found'], 404);

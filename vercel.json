@@ -13,6 +13,10 @@
       "runtime": "vercel-php@0.9.0",
       "maxDuration": 60
     },
+    "api/customer/*.php": {
+      "runtime": "vercel-php@0.9.0",
+      "maxDuration": 30
+    },
     "api/track-order.php": {
       "runtime": "vercel-php@0.9.0",
       "maxDuration": 30
@@ -56,8 +60,16 @@
       "destination": "/api/admin/file.php?storedName=:storedName"
     },
     {
+      "source": "/api/customer/profile",
+      "destination": "/api/customer/profile.php"
+    },
+    {
       "source": "/admin",
       "destination": "/pages/admin.html"
+    },
+    {
+      "source": "/profile",
+      "destination": "/pages/profile.html"
     },
     {
       "source": "/track-order",

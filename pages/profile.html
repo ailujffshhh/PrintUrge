@@ -1,0 +1,59 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Profile | PrintUrge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/toast.css"/>
+</head>
+<body class="service-page profile-page">
+  <div data-include="site-header"></div>
+
+  <main id="top" class="section">
+    <div class="container profile-dashboard">
+      <div class="section-intro">
+        <span class="badge">Account</span>
+        <h1>Profile details</h1>
+        <p>Review your PrintUrge account and recent order history.</p>
+      </div>
+
+      <section class="card profile-gate" id="profile-gate" hidden>
+        <h2 class="auth-title">Sign in required</h2>
+        <p class="auth-subtitle">Log in to view your profile details and orders.</p>
+        <button type="button" class="btn btn-primary" data-open-auth="login">Log in</button>
+      </section>
+
+      <section id="profile-app" hidden>
+        <div class="profile-grid">
+          <article class="card profile-card">
+            <h2>Details</h2>
+            <dl class="profile-dl" id="profile-details"></dl>
+          </article>
+          <article class="card profile-card">
+            <h2>Order summary</h2>
+            <div class="profile-summary" id="profile-summary"></div>
+          </article>
+        </div>
+
+        <article class="card profile-card profile-history">
+          <div class="profile-history-head">
+            <h2>Order history</h2>
+            <a href="../pages/track-order.html" class="btn btn-outline">Track order</a>
+          </div>
+          <div class="profile-order-list" id="profile-orders"></div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <div data-include="auth-modal"></div>
+
+  <script src="../js/toast.js"></script>
+  <script src="../js/session.js"></script>
+  <script src="../js/main.js"></script>
+  <script src="../js/profile.js"></script>
+</body>
+</html>

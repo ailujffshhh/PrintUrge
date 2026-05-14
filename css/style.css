@@ -2002,6 +2002,156 @@ ul {
 	box-sizing: border-box;
 }
 
+/* Customer profile */
+.profile-dashboard {
+	display: grid;
+	gap: 1.25rem;
+}
+
+#profile-app[hidden],
+.profile-gate[hidden] {
+	display: none;
+}
+
+.profile-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+	gap: 1rem;
+	align-items: stretch;
+}
+
+.profile-card {
+	padding: clamp(1rem, 2vw, 1.35rem);
+}
+
+.profile-card h2 {
+	font-size: 1.25rem;
+	margin-bottom: 0.8rem;
+}
+
+.profile-dl {
+	display: grid;
+	grid-template-columns: 8rem minmax(0, 1fr);
+	gap: 0.55rem 1rem;
+	margin: 0;
+}
+
+.profile-dl dt {
+	color: var(--muted);
+	font-weight: 700;
+}
+
+.profile-dl dd {
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.profile-summary {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.75rem;
+}
+
+.profile-summary div {
+	display: grid;
+	gap: 0.25rem;
+	padding: 0.8rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	background: var(--surface-alt);
+}
+
+.profile-summary strong {
+	font-family: var(--font-heading);
+	font-size: 1.6rem;
+	line-height: 1;
+}
+
+.profile-summary span {
+	color: var(--muted);
+	font-size: 0.86rem;
+	font-weight: 700;
+}
+
+.profile-history-head,
+.profile-order,
+.profile-order-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.65rem;
+	align-items: center;
+}
+
+.profile-history-head {
+	justify-content: space-between;
+	margin-bottom: 0.85rem;
+}
+
+.profile-history-head h2 {
+	margin-bottom: 0;
+}
+
+.profile-order-list {
+	display: grid;
+	gap: 0.7rem;
+}
+
+.profile-order {
+	justify-content: space-between;
+	padding: 0.8rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-sm);
+	background: #f8fbff;
+}
+
+.profile-order-main {
+	display: grid;
+	gap: 0.15rem;
+	min-width: min(100%, 16rem);
+}
+
+.profile-order-main strong {
+	overflow-wrap: anywhere;
+}
+
+.profile-order-main span,
+.profile-order-meta > span:last-child {
+	color: var(--muted);
+}
+
+.profile-gate {
+	display: grid;
+	gap: 0.8rem;
+	max-width: 32rem;
+}
+
+@media (max-width: 760px) {
+	.profile-grid,
+	.profile-summary {
+		grid-template-columns: 1fr;
+	}
+
+	.profile-dl {
+		grid-template-columns: 1fr;
+		gap: 0.2rem;
+	}
+
+	.profile-dl dd {
+		margin-bottom: 0.35rem;
+	}
+
+	.profile-history-head,
+	.profile-order {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.profile-history-head .btn {
+		width: 100%;
+		justify-content: center;
+	}
+}
+
 .payment-step {
 	display: none;
 	gap: 0.75rem;

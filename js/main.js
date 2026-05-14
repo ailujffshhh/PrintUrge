@@ -167,6 +167,7 @@ const refreshAuthNav = () => {
         : "";
     wrap.innerHTML = `
       ${adminBtn}
+      <a href="${basePath}pages/profile.html" class="btn btn-outline">Profile</a>
       <span class="nav-user-label">${escapeHtml(session.user.name)}</span>
       <button type="button" class="btn btn-primary" data-auth-logout>Log out</button>
     `;
