@@ -21,7 +21,9 @@
       </div>
 
       <section class="card profile-gate" id="profile-gate" hidden>
-        <h2 class="auth-title">Sign in required</h2>
+        <div class="profile-history-head">
+          <h2 class="auth-title">Sign in required</h2>
+        </div>
         <p class="auth-subtitle">Log in to view your profile details and orders.</p>
         <button type="button" class="btn btn-primary" data-open-auth="login">Log in</button>
       </section>
@@ -29,11 +31,15 @@
       <section id="profile-app" hidden>
         <div class="profile-grid">
           <article class="card profile-card">
-            <h2>Details</h2>
+            <div class="profile-history-head">
+              <h2>Details</h2>
+            </div>
             <dl class="profile-dl" id="profile-details"></dl>
           </article>
           <article class="card profile-card">
-            <h2>Order summary</h2>
+            <div class="profile-history-head">
+              <h2>Order summary</h2>
+            </div>
             <div class="profile-summary" id="profile-summary"></div>
           </article>
         </div>

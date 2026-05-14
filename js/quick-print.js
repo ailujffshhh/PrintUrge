@@ -745,8 +745,8 @@
       '<div class="modal-content auth-modal" role="dialog" aria-modal="true" aria-labelledby="bank-win-title">' +
       '<div class="modal-header auth-header">' +
       '<div class="auth-heading">' +
-      '<h2 class="auth-title" id="bank-win-title">Bank transfer</h2>' +
-      '<p class="auth-subtitle">Scan the QR code with your banking app, then continue to upload your receipt.</p>' +
+      '<h2 class="auth-title" id="bank-win-title">Bank QR transfer</h2>' +
+      '<p class="auth-subtitle">Scan the QR code with your banking app, then continue to upload your receipt. This path is for signed-in customers only.</p>' +
       '</div><button type="button" class="modal-close" data-bank-win-close aria-label="Close">Close</button></div>' +
       '<div class="payment-qr-wrap">' +
       '<p class="payment-qr-label" style="margin:0 0 .5rem;font-weight:600;text-align:center">Bank QR image</p>' +
@@ -802,7 +802,11 @@
       '<label class="field"><span>Name</span><input type="text" name="customerName" required autocomplete="name"></label>' +
       '<label class="field"><span>Email</span><input type="email" name="customerEmail" required autocomplete="email" placeholder="For e-receipt and order tracking"></label>' +
       '<label class="field"><span>Notes</span><textarea name="customerNotes" rows="3" placeholder="Paper instructions, pickup notes, or contact details"></textarea></label>' +
-      '<label class="field"><span>Payment method</span><select name="paymentMethod" required><option value="cash" selected>Cash on pickup</option><option value="ewallet">E-wallet transfer</option><option value="bank_transfer">Bank transfer</option></select></label>' +
+      '<label class="field"><span>Payment method</span><select name="paymentMethod" id="payment-method-select" required aria-describedby="payment-method-note">' +
+      '<option value="cash" selected>Cash on pickup</option>' +
+      '<option value="bank_qr">Bank QR transfer</option>' +
+      '</select></label>' +
+      '<p class="auth-hint payment-method-note" id="payment-method-note" role="note"></p>' +
       '<button type="button" class="btn btn-primary full-width" id="payment-details-continue">Continue</button>' +
       '</div>' +
       '<div class="payment-step" id="payment-cash-confirm-step">' +
@@ -813,7 +817,7 @@
       '<button type="button" class="btn btn-primary" id="payment-cash-confirm-submit">Confirm order</button>' +
       '</div></div>' +
       '<div class="payment-step" id="payment-receipt-step">' +
-      '<p class="auth-hint" id="payment-receipt-hint">Upload a clear photo or screenshot of your bank transfer receipt. Staff will verify it before confirming payment.</p>' +
+      '<p class="auth-hint" id="payment-receipt-hint">Upload a clear photo or screenshot of your bank QR payment receipt. Staff will verify it before confirming payment.</p>' +
       '<label class="field"><span>Receipt image</span><input type="file" id="payment-receipt-input" accept="image/*"></label>' +
       '<div class="payment-actions">' +
       '<button type="button" class="btn btn-outline" data-receipt-back>Back</button>' +
@@ -839,7 +843,15 @@
         showPaymentStep("cashConfirm");
         return;
       }
-      openBankQrWindowModal();
+      if (details.paymentMethod === "bank_qr") {
+        if (!isSignedIn()) {
+          notify("Bank QR transfer is only available when you are signed in. Log in or sign up, or choose cash on pickup.", "error");
+          return;
+        }
+        openBankQrWindowModal();
+        return;
+      }
+      notify("Please choose a payment method.", "error");
     });
     modal.querySelector("[data-cash-confirm-back]").addEventListener("click", function () {
       showPaymentStep("details");
@@ -878,9 +890,30 @@
   }
 
   function syncPaymentMethodLock() {
-    var modal = ensurePaymentModal();
+    var modal = document.getElementById("guest-payment-modal");
+    if (!modal) return;
     var select = modal.querySelector('[name="paymentMethod"]');
+    var note = modal.querySelector("#payment-method-note");
     if (!select) return;
+    var signed = isSignedIn();
+    var bankOpt = select.querySelector('option[value="bank_qr"]');
+    if (bankOpt) {
+      bankOpt.disabled = !signed;
+      bankOpt.setAttribute("aria-disabled", signed ? "false" : "true");
+    }
+    if (select.value === "bank_qr" && !signed) {
+      select.value = "cash";
+    }
+    if (note) {
+      note.hidden = false;
+      if (signed) {
+        note.textContent =
+          "Bank QR transfer: you will scan our QR, complete the transfer, then upload a payment screenshot. Available only while signed in.";
+      } else {
+        note.textContent =
+          "Bank QR transfer is only for accounts signed in on this site. Use Log in or Sign up in the header to unlock it, or stay on Cash on pickup.";
+      }
+    }
   }
 
   function prefillCheckoutIdentity() {

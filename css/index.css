@@ -1282,6 +1282,202 @@ ul {
     font-size: .94rem
 }
 
+/* ── For print shops (B2B) ───────────────────────────────────────── */
+.business-cta {
+    position: relative;
+    padding: clamp(3.5rem, 8vw, 5rem) 0;
+    background: linear-gradient(155deg, #081229 0%, #0f1f4a 42%, #15356d 88%);
+    color: #e6eeff;
+    overflow: hidden
+}
+
+.business-cta-wrap {
+    position: relative;
+    z-index: 1
+}
+
+.business-cta-glow {
+    position: absolute;
+    width: min(520px, 90vw);
+    height: min(520px, 90vw);
+    top: -18%;
+    right: -8%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, rgba(1, 199, 221, .35) 0%, transparent 62%);
+    pointer-events: none;
+    filter: blur(2px)
+}
+
+.business-cta-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+    gap: clamp(1.75rem, 4vw, 3rem);
+    align-items: stretch;
+    padding: clamp(1.5rem, 3.5vw, 2.35rem);
+    border-radius: calc(var(--radius-lg) + 4px);
+    background: linear-gradient(145deg, rgba(255, 255, 255, .07) 0%, rgba(255, 255, 255, .03) 100%);
+    border: 1px solid rgba(255, 255, 255, .12);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, .1) inset,
+        0 24px 50px rgba(4, 12, 40, .45)
+}
+
+.business-cta-main {
+    display: grid;
+    gap: 1rem;
+    min-width: 0
+}
+
+.business-cta .badge {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .2)
+}
+
+.business-cta-main h2 {
+    font-size: clamp(1.55rem, 3.2vw, 2.15rem);
+    font-weight: 800;
+    line-height: 1.18;
+    color: #fff;
+    letter-spacing: -.03em;
+    max-width: 22ch
+}
+
+.business-cta-lead {
+    color: rgba(214, 228, 255, .9);
+    font-size: clamp(.95rem, 1.5vw, 1.05rem);
+    line-height: 1.55;
+    max-width: 62ch
+}
+
+.business-cta-list {
+    display: grid;
+    gap: .85rem;
+    margin-top: .35rem
+}
+
+.business-cta-list li {
+    display: flex;
+    gap: .75rem;
+    align-items: flex-start;
+    font-size: .94rem;
+    line-height: 1.5;
+    color: rgba(220, 232, 255, .92)
+}
+
+.business-cta-list strong {
+    color: #fff;
+    font-weight: 700
+}
+
+.business-cta-check {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: rgba(1, 199, 221, .18);
+    border: 1px solid rgba(1, 199, 221, .35);
+    color: #9cf6ff
+}
+
+.business-cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    margin-top: .4rem
+}
+
+.business-cta-mail {
+    box-shadow: 0 10px 22px rgba(1, 199, 221, .35)
+}
+
+.business-cta-secondary {
+    color: #e8f0ff;
+    border-color: rgba(255, 255, 255, .35);
+    background: rgba(8, 18, 45, .35)
+}
+
+.business-cta-secondary:hover {
+    border-color: var(--brand-cyan);
+    background: rgba(8, 18, 45, .55)
+}
+
+.business-cta-card {
+    padding: 1.35rem 1.25rem;
+    border-radius: var(--radius-md);
+    background: linear-gradient(160deg, rgba(255, 255, 255, .11) 0%, rgba(255, 255, 255, .04) 100%);
+    border: 1px solid rgba(255, 255, 255, .14);
+    display: flex;
+    flex-direction: column;
+    gap: .85rem
+}
+
+.business-cta-card-kicker {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(156, 246, 255, .85)
+}
+
+.business-cta-card-title {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #fff;
+    letter-spacing: -.02em
+}
+
+.business-cta-card-points {
+    display: grid;
+    gap: .55rem;
+    font-size: .9rem;
+    color: rgba(210, 224, 255, .88);
+    line-height: 1.45
+}
+
+.business-cta-card-points li {
+    position: relative;
+    padding-left: 1.1rem
+}
+
+.business-cta-card-points li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: .55em;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--brand-cyan), var(--brand-orange))
+}
+
+.business-cta-card-stat {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+    display: grid;
+    gap: .35rem
+}
+
+.business-cta-stat-value {
+    font-family: var(--font-heading);
+    font-size: 1.65rem;
+    font-weight: 800;
+    letter-spacing: -.03em;
+    background: linear-gradient(115deg, #fff 20%, #9aefff 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent
+}
+
+.business-cta-stat-label {
+    font-size: .86rem;
+    color: rgba(195, 210, 245, .88);
+    line-height: 1.45
+}
+
 /* ── FAQ ─────────────────────────────────────────────────────────── */
 .faq-layout {
     display: grid;
@@ -1418,12 +1614,40 @@ ul {
 
 .footer-shell {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 1.15rem;
     border-top: 1px solid rgba(167, 189, 233, .35);
     padding-top: 1.1rem
+}
+
+.footer-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem 2rem;
+    flex-wrap: wrap;
+    width: 100%
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    align-items: center
+}
+
+.footer-links a {
+    font-size: .9rem;
+    font-weight: 600;
+    color: rgba(200, 220, 255, .95);
+    text-decoration: underline;
+    text-underline-offset: .2em;
+    text-decoration-color: rgba(1, 199, 221, .45)
+}
+
+.footer-links a:hover {
+    color: #fff;
+    text-decoration-color: var(--brand-cyan)
 }
 
 .footer-brand {
@@ -1438,9 +1662,13 @@ ul {
 }
 
 .footer-brand p,
-.site-footer .footer-shell>p {
+.footer-copy {
     color: rgba(220, 234, 255, .86);
     font-size: .9rem
+}
+
+.footer-copy {
+    margin: 0
 }
 
 /* ── Responsive ──────────────────────────────────────────────────── */
@@ -1448,7 +1676,8 @@ ul {
 
     .hero-grid,
     .membership-shell,
-    .faq-layout {
+    .faq-layout,
+    .business-cta-panel {
         grid-template-columns: 1fr
     }
 
@@ -1536,7 +1765,11 @@ ul {
         grid-template-columns: 1fr
     }
 
-    .footer-shell {
+    .business-cta-actions .btn {
+        width: 100%
+    }
+
+    .footer-top {
         flex-direction: column;
         align-items: flex-start
     }

@@ -552,6 +552,18 @@ function create_print_request(PDO $pdo, $forceUserId, bool $attachUploader): arr
     $customerName = trim((string)($_POST['customerName'] ?? $_POST['customer_name'] ?? ''));
     $customerNotes = trim((string)($_POST['customerNotes'] ?? $_POST['customer_notes'] ?? ''));
     $paymentMethod = trim((string)($_POST['paymentMethod'] ?? $_POST['payment_method'] ?? ''));
+    $pmLower = strtolower($paymentMethod);
+    if ($attachUploader) {
+        if ($pmLower === 'ewallet' || $pmLower === 'bank_transfer') {
+            json_response(['error' => 'That payment method is no longer supported. Choose cash on pickup or bank QR transfer.'], 400);
+        }
+        if ($pmLower === 'bank_qr' && !$userId) {
+            json_response(['error' => 'Bank QR transfer is only available for signed-in accounts. Sign in and try again, or choose cash on pickup.'], 403);
+        }
+        if ($pmLower !== '' && $pmLower !== 'cash' && $pmLower !== 'bank_qr') {
+            json_response(['error' => 'Invalid payment method'], 400);
+        }
+    }
     $requestedPayment = strtolower(trim((string)($_POST['paymentStatus'] ?? $_POST['payment_status'] ?? 'unpaid')));
     $paymentStatus = printurge_normalize_payment_status_for_create(
         $requestedPayment,
